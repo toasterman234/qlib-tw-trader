@@ -364,6 +364,12 @@ class WalkForwardBacktester:
                 (self._features_cache.index.get_level_values("datetime") >= start_str) &
                 (self._features_cache.index.get_level_values("datetime") <= end_str)
             ].copy()
+
+            # 篩選該模型需要的因子（cache 可能包含更多因子）
+            names = [f["name"] for f in factors]
+            available = [n for n in names if n in df.columns]
+            if available:
+                df = df[available]
         else:
             # 回退到直接查詢（兼容舊用法）
             self._init_qlib()

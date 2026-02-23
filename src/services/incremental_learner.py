@@ -9,6 +9,7 @@ import lightgbm as lgb
 import numpy as np
 import pandas as pd
 import qlib
+from qlib.config import REG_CN
 from qlib.data import D
 from sqlalchemy.orm import Session
 
@@ -38,7 +39,7 @@ class IncrementalLearner:
 
         qlib.init(
             provider_uri=str(self._qlib_data_dir),
-            region="tw",
+            region=REG_CN,
         )
         self._qlib_initialized = True
 

@@ -1,0 +1,1388 @@
+[
+  {
+    "predict_week": "2023W02",
+    "model_week": "2023W01",
+    "valid_ic": 0.04440979745601149,
+    "live_ic": -0.036813993145844943,
+    "week_return": 0.09475348889827728,
+    "market_return": 0.6220788955688477,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2023W03",
+    "model_week": "2023W02",
+    "valid_ic": 0.02061944176833614,
+    "live_ic": null,
+    "week_return": -0.2864310145378113,
+    "market_return": 0.011888091452419758,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2023W04",
+    "model_week": "2023W03",
+    "valid_ic": null,
+    "live_ic": null,
+    "week_return": null,
+    "market_return": null,
+    "factor_count": 0
+  },
+  {
+    "predict_week": "2023W06",
+    "model_week": "2023W05",
+    "valid_ic": 0.03184183058105895,
+    "live_ic": 0.054176992895967536,
+    "week_return": 0.8224884867668152,
+    "market_return": 0.5054517388343811,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2023W07",
+    "model_week": "2023W06",
+    "valid_ic": 0.04616354232144981,
+    "live_ic": -0.04765449578759442,
+    "week_return": 0.49569740891456604,
+    "market_return": 1.2697253227233887,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2023W08",
+    "model_week": "2023W07",
+    "valid_ic": 0.053035268671866295,
+    "live_ic": 0.058306276416109776,
+    "week_return": 1.7111287117004395,
+    "market_return": 1.800307035446167,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2023W09",
+    "model_week": "2023W08",
+    "valid_ic": 0.03857209050232307,
+    "live_ic": 0.0229775525547803,
+    "week_return": 1.155763864517212,
+    "market_return": 1.2138499021530151,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2023W10",
+    "model_week": "2023W09",
+    "valid_ic": 0.04204306365280746,
+    "live_ic": -0.06908069567058826,
+    "week_return": -1.3080984354019165,
+    "market_return": -0.44659432768821716,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2023W11",
+    "model_week": "2023W10",
+    "valid_ic": 0.01925500685894806,
+    "live_ic": 0.032999738376046764,
+    "week_return": -1.5794256925582886,
+    "market_return": -0.9934626817703247,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2023W12",
+    "model_week": "2023W11",
+    "valid_ic": 0.028711884567380698,
+    "live_ic": -0.0070110456559643545,
+    "week_return": 1.8139954805374146,
+    "market_return": 3.256714344024658,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2023W13",
+    "model_week": "2023W12",
+    "valid_ic": 0.014691854850657708,
+    "live_ic": 0.006098328913821369,
+    "week_return": -0.4801645874977112,
+    "market_return": 0.22862380743026733,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2023W14",
+    "model_week": "2023W13",
+    "valid_ic": 0.023791736374437416,
+    "live_ic": 0.005045809757543937,
+    "week_return": -0.4100024700164795,
+    "market_return": 0.28537097573280334,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2023W15",
+    "model_week": "2023W14",
+    "valid_ic": 0.04978963366388355,
+    "live_ic": 0.07371163878352417,
+    "week_return": 3.3007712364196777,
+    "market_return": 1.4413033723831177,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2023W16",
+    "model_week": "2023W15",
+    "valid_ic": 0.04639555585776108,
+    "live_ic": -0.05257163212381051,
+    "week_return": -2.312864065170288,
+    "market_return": -1.6299340724945068,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2023W17",
+    "model_week": "2023W16",
+    "valid_ic": 0.03954218693093542,
+    "live_ic": -0.05313112375458995,
+    "week_return": -0.08812524378299713,
+    "market_return": 0.6980502009391785,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2023W18",
+    "model_week": "2023W17",
+    "valid_ic": 0.028809482503974356,
+    "live_ic": -0.001548327262823541,
+    "week_return": -0.13224634528160095,
+    "market_return": 1.0308274030685425,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2023W19",
+    "model_week": "2023W18",
+    "valid_ic": 0.05563024563180244,
+    "live_ic": -0.10693294917075424,
+    "week_return": -2.7508530616760254,
+    "market_return": -1.5870124101638794,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2023W20",
+    "model_week": "2023W19",
+    "valid_ic": 0.056773919194165065,
+    "live_ic": 0.0014813978235285624,
+    "week_return": 4.471355438232422,
+    "market_return": 4.157009124755859,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2023W21",
+    "model_week": "2023W20",
+    "valid_ic": 0.06500469594644163,
+    "live_ic": -0.06389532837683379,
+    "week_return": 2.253628969192505,
+    "market_return": 1.4432371854782104,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2023W22",
+    "model_week": "2023W21",
+    "valid_ic": 0.025686218239525146,
+    "live_ic": -0.005281830609033868,
+    "week_return": 1.0010985136032104,
+    "market_return": 0.9531167149543762,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2023W23",
+    "model_week": "2023W22",
+    "valid_ic": 0.0019552090669291648,
+    "live_ic": 0.005650013941001747,
+    "week_return": 1.5757557153701782,
+    "market_return": 0.33935311436653137,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2023W24",
+    "model_week": "2023W23",
+    "valid_ic": 0.005628265424519933,
+    "live_ic": -0.029965630499531593,
+    "week_return": 1.7093446254730225,
+    "market_return": 2.572690486907959,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2023W25",
+    "model_week": "2023W24",
+    "valid_ic": 0.023847632111108973,
+    "live_ic": 0.0029272279152302203,
+    "week_return": -1.2269015312194824,
+    "market_return": -0.09868856519460678,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2023W26",
+    "model_week": "2023W25",
+    "valid_ic": 0.02986192247651132,
+    "live_ic": 0.18877641643938028,
+    "week_return": -1.9978208541870117,
+    "market_return": -1.433040738105774,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2023W27",
+    "model_week": "2023W26",
+    "valid_ic": 0.03278026137595491,
+    "live_ic": 0.062428351592497155,
+    "week_return": 1.4262185096740723,
+    "market_return": -1.2487131357192993,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2023W28",
+    "model_week": "2023W27",
+    "valid_ic": 0.030532469751309556,
+    "live_ic": 0.16598109551798465,
+    "week_return": 11.595080375671387,
+    "market_return": 4.4095306396484375,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2023W29",
+    "model_week": "2023W28",
+    "valid_ic": 0.030421770155742475,
+    "live_ic": 0.14307734135095357,
+    "week_return": 0.731041431427002,
+    "market_return": -0.8590657114982605,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2023W30",
+    "model_week": "2023W29",
+    "valid_ic": 0.02915475076846386,
+    "live_ic": -0.10200390883026614,
+    "week_return": 0.7952845692634583,
+    "market_return": 0.11847075074911118,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2023W31",
+    "model_week": "2023W30",
+    "valid_ic": 0.03290247716806397,
+    "live_ic": 0.08171535268023636,
+    "week_return": -15.866825103759766,
+    "market_return": -4.9343156814575195,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2023W32",
+    "model_week": "2023W31",
+    "valid_ic": 0.0263857558887933,
+    "live_ic": 0.04884384710632487,
+    "week_return": -1.7198982238769531,
+    "market_return": -1.1783196926116943,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2023W33",
+    "model_week": "2023W32",
+    "valid_ic": 0.04967865690022808,
+    "live_ic": 0.09085411219395198,
+    "week_return": 7.105844497680664,
+    "market_return": 1.1381936073303223,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2023W34",
+    "model_week": "2023W33",
+    "valid_ic": 0.043755783060776265,
+    "live_ic": -0.09068644376825628,
+    "week_return": 2.417860269546509,
+    "market_return": 0.6556979417800903,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2023W35",
+    "model_week": "2023W34",
+    "valid_ic": 0.05824112054327013,
+    "live_ic": -0.045137800543092244,
+    "week_return": 0.41338902711868286,
+    "market_return": 0.7597304582595825,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2023W36",
+    "model_week": "2023W35",
+    "valid_ic": 0.05245937300485991,
+    "live_ic": 0.043465020662005686,
+    "week_return": 1.1123576164245605,
+    "market_return": -0.03063363768160343,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2023W37",
+    "model_week": "2023W36",
+    "valid_ic": 0.05387560755732906,
+    "live_ic": -0.16818363836772413,
+    "week_return": -2.561018705368042,
+    "market_return": 1.5069713592529297,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2023W38",
+    "model_week": "2023W37",
+    "valid_ic": 0.05143626193654177,
+    "live_ic": 0.06759949210510567,
+    "week_return": -4.823105335235596,
+    "market_return": -2.9518957138061523,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2023W39",
+    "model_week": "2023W38",
+    "valid_ic": 0.03249024258329253,
+    "live_ic": 0.039958156113455434,
+    "week_return": 2.338261365890503,
+    "market_return": 0.28641006350517273,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2023W40",
+    "model_week": "2023W39",
+    "valid_ic": 0.06725601097904593,
+    "live_ic": 0.03868213552685824,
+    "week_return": 1.0176466703414917,
+    "market_return": 0.32956650853157043,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2023W41",
+    "model_week": "2023W40",
+    "valid_ic": 0.04264404463411605,
+    "live_ic": -0.283293811446341,
+    "week_return": -1.5619045495986938,
+    "market_return": -0.28498560190200806,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2023W42",
+    "model_week": "2023W41",
+    "valid_ic": 0.06437349822218554,
+    "live_ic": 0.02217048245461123,
+    "week_return": -5.948506832122803,
+    "market_return": -3.1238958835601807,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2023W43",
+    "model_week": "2023W42",
+    "valid_ic": 0.042867417342321204,
+    "live_ic": -0.07242338554909174,
+    "week_return": 0.2527616322040558,
+    "market_return": -0.12009158730506897,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2023W44",
+    "model_week": "2023W43",
+    "valid_ic": 0.05183263638640439,
+    "live_ic": 0.02251824072063449,
+    "week_return": 0.47899410128593445,
+    "market_return": 1.7013224363327026,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2023W45",
+    "model_week": "2023W44",
+    "valid_ic": 0.07706427755148464,
+    "live_ic": 0.025573745715003184,
+    "week_return": 3.549609661102295,
+    "market_return": 0.4432997703552246,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2023W46",
+    "model_week": "2023W45",
+    "valid_ic": 0.0650630177792385,
+    "live_ic": -0.07911715201155209,
+    "week_return": -1.7490234375,
+    "market_return": 1.6181269884109497,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2023W47",
+    "model_week": "2023W46",
+    "valid_ic": 0.058014248317244284,
+    "live_ic": 0.05972599472949497,
+    "week_return": 0.21582306921482086,
+    "market_return": 0.5513651371002197,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2023W48",
+    "model_week": "2023W47",
+    "valid_ic": 0.04869384325180148,
+    "live_ic": -0.028794686685264987,
+    "week_return": -0.7652720212936401,
+    "market_return": 0.7659716010093689,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2023W49",
+    "model_week": "2023W48",
+    "valid_ic": 0.04906913829755843,
+    "live_ic": 0.012760183822200743,
+    "week_return": -0.7700746059417725,
+    "market_return": 0.4031064510345459,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2023W50",
+    "model_week": "2023W49",
+    "valid_ic": 0.044330100593958525,
+    "live_ic": 0.09444127537491417,
+    "week_return": -2.04891300201416,
+    "market_return": 1.8697904348373413,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2023W51",
+    "model_week": "2023W50",
+    "valid_ic": 0.031826937067181676,
+    "live_ic": 0.030416340586775215,
+    "week_return": -1.7351446151733398,
+    "market_return": 0.08832444995641708,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2023W52",
+    "model_week": "2023W51",
+    "valid_ic": 0.04207033364405589,
+    "live_ic": 0.08873656925104507,
+    "week_return": 0.6705614924430847,
+    "market_return": 1.8872549533843994,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2024W01",
+    "model_week": "2023W52",
+    "valid_ic": 0.05256908071357593,
+    "live_ic": 0.03831470896819001,
+    "week_return": -3.5486156940460205,
+    "market_return": -2.012955665588379,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2024W02",
+    "model_week": "2024W01",
+    "valid_ic": 0.01959309298681263,
+    "live_ic": -0.010308418859106572,
+    "week_return": 2.355976104736328,
+    "market_return": -0.647986114025116,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2024W03",
+    "model_week": "2024W02",
+    "valid_ic": 0.025646426563360747,
+    "live_ic": -0.02104030761750503,
+    "week_return": -0.08857153356075287,
+    "market_return": -1.8724405765533447,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2024W04",
+    "model_week": "2024W03",
+    "valid_ic": 0.029990144127445304,
+    "live_ic": -0.039388935943928303,
+    "week_return": 1.3124021291732788,
+    "market_return": 0.6259013414382935,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2024W05",
+    "model_week": "2024W04",
+    "valid_ic": 0.020855768677397094,
+    "live_ic": -0.08789739103354138,
+    "week_return": 1.3781203031539917,
+    "market_return": 2.3843066692352295,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2024W06",
+    "model_week": "2024W05",
+    "valid_ic": 0.03889768283244471,
+    "live_ic": -0.05989390975584138,
+    "week_return": null,
+    "market_return": null,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2024W07",
+    "model_week": "2024W06",
+    "valid_ic": 0.05299605204893913,
+    "live_ic": -0.0074057209643623445,
+    "week_return": -0.15438531339168549,
+    "market_return": 0.29995331168174744,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2024W08",
+    "model_week": "2024W07",
+    "valid_ic": 0.03238361099030346,
+    "live_ic": -0.09549228783095198,
+    "week_return": -0.3833056092262268,
+    "market_return": 2.060046672821045,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2024W09",
+    "model_week": "2024W08",
+    "valid_ic": 0.023392804503494357,
+    "live_ic": 0.03192064867690534,
+    "week_return": 0.7787572741508484,
+    "market_return": 0.8034369945526123,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2024W10",
+    "model_week": "2024W09",
+    "valid_ic": 0.04015720670788563,
+    "live_ic": 0.028284278719124773,
+    "week_return": 1.338071584701538,
+    "market_return": 1.538524866104126,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2024W11",
+    "model_week": "2024W10",
+    "valid_ic": 0.010535377441200224,
+    "live_ic": 0.04259359514129035,
+    "week_return": -2.7943646907806396,
+    "market_return": 0.11777157336473465,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2024W12",
+    "model_week": "2024W11",
+    "valid_ic": 0.05094321193381867,
+    "live_ic": 0.007925845276160273,
+    "week_return": 2.3953135013580322,
+    "market_return": 2.7234046459198,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2024W13",
+    "model_week": "2024W12",
+    "valid_ic": 0.023076366378355175,
+    "live_ic": -0.0455638791305044,
+    "week_return": -3.936833620071411,
+    "market_return": -0.6765461564064026,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2024W14",
+    "model_week": "2024W13",
+    "valid_ic": 0.03381856076985025,
+    "live_ic": 0.08128980749446203,
+    "week_return": -2.8797645568847656,
+    "market_return": -0.537778377532959,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2024W15",
+    "model_week": "2024W14",
+    "valid_ic": -0.0007482865968560677,
+    "live_ic": 0.05196881662131825,
+    "week_return": 0.537453293800354,
+    "market_return": 0.8820727467536926,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2024W16",
+    "model_week": "2024W15",
+    "valid_ic": 0.010555379866076728,
+    "live_ic": 0.16920405406161562,
+    "week_return": -8.474471092224121,
+    "market_return": -3.1657636165618896,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2024W17",
+    "model_week": "2024W16",
+    "valid_ic": -0.002747912631442329,
+    "live_ic": 0.08720393047142234,
+    "week_return": 0.03093557246029377,
+    "market_return": 1.3374264240264893,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2024W18",
+    "model_week": "2024W17",
+    "valid_ic": 0.041377125045888793,
+    "live_ic": -0.03584746384967018,
+    "week_return": -0.4424649178981781,
+    "market_return": 0.8973615169525146,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2024W19",
+    "model_week": "2024W18",
+    "valid_ic": 0.01651310971310104,
+    "live_ic": 0.048525802282225014,
+    "week_return": 1.5771657228469849,
+    "market_return": 0.4428836405277252,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2024W20",
+    "model_week": "2024W19",
+    "valid_ic": -0.004220298533575798,
+    "live_ic": -0.016993110312170358,
+    "week_return": 1.9349114894866943,
+    "market_return": 1.7234302759170532,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2024W21",
+    "model_week": "2024W20",
+    "valid_ic": 0.017334335206503123,
+    "live_ic": -0.005115873720445048,
+    "week_return": -0.6401878595352173,
+    "market_return": -0.4399680197238922,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2024W22",
+    "model_week": "2024W21",
+    "valid_ic": 0.010576599995839521,
+    "live_ic": 0.012991160640321991,
+    "week_return": -0.125812366604805,
+    "market_return": -0.365425705909729,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2024W23",
+    "model_week": "2024W22",
+    "valid_ic": 0.002558900267435234,
+    "live_ic": -0.016657627935610816,
+    "week_return": -1.4395979642868042,
+    "market_return": 0.11329187452793121,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2024W24",
+    "model_week": "2024W23",
+    "valid_ic": 0.008495239935977781,
+    "live_ic": -0.04952815120768883,
+    "week_return": 2.809494733810425,
+    "market_return": 1.1148419380187988,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2024W25",
+    "model_week": "2024W24",
+    "valid_ic": 0.011048331164775204,
+    "live_ic": 0.11863839709075197,
+    "week_return": 1.8163713216781616,
+    "market_return": 1.8442796468734741,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2024W26",
+    "model_week": "2024W25",
+    "valid_ic": 0.00539577856365392,
+    "live_ic": -0.02239589502934408,
+    "week_return": -2.9525434970855713,
+    "market_return": -1.0541067123413086,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2024W27",
+    "model_week": "2024W26",
+    "valid_ic": 0.019748733660529268,
+    "live_ic": 0.045106476562955175,
+    "week_return": 1.1370350122451782,
+    "market_return": 1.7394222021102905,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2024W28",
+    "model_week": "2024W27",
+    "valid_ic": 0.01822678747887573,
+    "live_ic": -0.024745841893177616,
+    "week_return": -3.880610227584839,
+    "market_return": -0.053142525255680084,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2024W29",
+    "model_week": "2024W28",
+    "valid_ic": 0.02624945790140842,
+    "live_ic": -0.016264141960715083,
+    "week_return": -1.891512393951416,
+    "market_return": -2.3595893383026123,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2024W30",
+    "model_week": "2024W29",
+    "valid_ic": -0.0021989111036774356,
+    "live_ic": 0.03695104343933961,
+    "week_return": -4.370096206665039,
+    "market_return": -3.190260648727417,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2024W31",
+    "model_week": "2024W30",
+    "valid_ic": 0.013705400478881174,
+    "live_ic": 0.044825115220707215,
+    "week_return": -5.528226375579834,
+    "market_return": -1.9042562246322632,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2024W32",
+    "model_week": "2024W31",
+    "valid_ic": -0.0031271991879260777,
+    "live_ic": 0.03757032229320935,
+    "week_return": 4.104099273681641,
+    "market_return": 1.7001181840896606,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2024W33",
+    "model_week": "2024W32",
+    "valid_ic": -0.007690226887454347,
+    "live_ic": -0.03349641943963996,
+    "week_return": 1.089052438735962,
+    "market_return": 3.4089646339416504,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2024W34",
+    "model_week": "2024W33",
+    "valid_ic": -0.00319121199314972,
+    "live_ic": -0.08662036498201468,
+    "week_return": -3.086911678314209,
+    "market_return": -1.0647574663162231,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2024W35",
+    "model_week": "2024W34",
+    "valid_ic": -0.022380099240398636,
+    "live_ic": -0.008049303113864644,
+    "week_return": -0.38519030809402466,
+    "market_return": 0.011116969399154186,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2024W36",
+    "model_week": "2024W35",
+    "valid_ic": -0.0016278813565173125,
+    "live_ic": 0.024996481469176265,
+    "week_return": -4.785831928253174,
+    "market_return": -5.713834762573242,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2024W37",
+    "model_week": "2024W36",
+    "valid_ic": 0.0030917304771340822,
+    "live_ic": -0.03829203530706014,
+    "week_return": 5.23753547668457,
+    "market_return": 3.6868066787719727,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2024W38",
+    "model_week": "2024W37",
+    "valid_ic": 0.009784474959410197,
+    "live_ic": 0.07760697828321253,
+    "week_return": 2.0568432807922363,
+    "market_return": 1.7937432527542114,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2024W39",
+    "model_week": "2024W38",
+    "valid_ic": -0.00402477994666078,
+    "live_ic": 0.01063879563870831,
+    "week_return": 4.084364891052246,
+    "market_return": 2.4061012268066406,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2024W40",
+    "model_week": "2024W39",
+    "valid_ic": -0.00166009239934466,
+    "live_ic": -0.033245521569959316,
+    "week_return": -1.1910251379013062,
+    "market_return": -2.0337491035461426,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2024W41",
+    "model_week": "2024W40",
+    "valid_ic": 0.00154982249672941,
+    "live_ic": 0.05816014080930947,
+    "week_return": 0.6443014740943909,
+    "market_return": -0.19720934331417084,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2024W42",
+    "model_week": "2024W41",
+    "valid_ic": 0.01996696934759823,
+    "live_ic": -0.05434888342037871,
+    "week_return": 1.9303977489471436,
+    "market_return": 2.4520599842071533,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2024W43",
+    "model_week": "2024W42",
+    "valid_ic": 0.009463549350732169,
+    "live_ic": 0.11119885745360239,
+    "week_return": -1.07987380027771,
+    "market_return": -0.5159626007080078,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2024W44",
+    "model_week": "2024W43",
+    "valid_ic": 0.0005040565428420184,
+    "live_ic": -0.013259233372874019,
+    "week_return": -3.103588581085205,
+    "market_return": -4.405867099761963,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2024W45",
+    "model_week": "2024W44",
+    "valid_ic": -0.025951949261333093,
+    "live_ic": -0.04245740805867023,
+    "week_return": 1.50009286403656,
+    "market_return": 3.519758939743042,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2024W46",
+    "model_week": "2024W45",
+    "valid_ic": 0.029567314143876977,
+    "live_ic": -0.0679155669307128,
+    "week_return": 1.2357642650604248,
+    "market_return": -2.073472738265991,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2024W47",
+    "model_week": "2024W46",
+    "valid_ic": 0.014006964676944747,
+    "live_ic": 0.023906620477125946,
+    "week_return": 0.8676038980484009,
+    "market_return": 1.3534824848175049,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2024W48",
+    "model_week": "2024W47",
+    "valid_ic": 0.024534104144494875,
+    "live_ic": 0.042372466124713584,
+    "week_return": -3.8635573387145996,
+    "market_return": -4.1678924560546875,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2024W49",
+    "model_week": "2024W48",
+    "valid_ic": 0.004360885799230613,
+    "live_ic": 0.08091830982936558,
+    "week_return": 2.784550666809082,
+    "market_return": 2.2334413528442383,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2024W50",
+    "model_week": "2024W49",
+    "valid_ic": 0.014855414559907243,
+    "live_ic": 0.052127355304113165,
+    "week_return": -2.008166790008545,
+    "market_return": -1.387887954711914,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2024W51",
+    "model_week": "2024W50",
+    "valid_ic": 0.02207637349465791,
+    "live_ic": 0.00962769259462253,
+    "week_return": -0.17433077096939087,
+    "market_return": -1.879043459892273,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2024W52",
+    "model_week": "2024W51",
+    "valid_ic": 0.013965731156377158,
+    "live_ic": -0.0036881278441062092,
+    "week_return": 0.7898852229118347,
+    "market_return": 1.0879157781600952,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2025W01",
+    "model_week": "2024W52",
+    "valid_ic": 0.018635350655359265,
+    "live_ic": 0.019589433599256745,
+    "week_return": 0.2659449875354767,
+    "market_return": -1.030778408050537,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2025W02",
+    "model_week": "2025W01",
+    "valid_ic": 0.019412262446135697,
+    "live_ic": -0.051097547411952805,
+    "week_return": 0.12284480035305023,
+    "market_return": -1.5976938009262085,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2025W03",
+    "model_week": "2025W02",
+    "valid_ic": -0.0039662623660342506,
+    "live_ic": -0.05103131546254358,
+    "week_return": -1.601767897605896,
+    "market_return": 0.8784099221229553,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2025W04",
+    "model_week": "2025W03",
+    "valid_ic": 0.021123781956852668,
+    "live_ic": -0.0028387693480087886,
+    "week_return": 1.0102266073226929,
+    "market_return": 1.3657715320587158,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2025W05",
+    "model_week": "2025W04",
+    "valid_ic": null,
+    "live_ic": null,
+    "week_return": null,
+    "market_return": null,
+    "factor_count": 0
+  },
+  {
+    "predict_week": "2025W07",
+    "model_week": "2025W06",
+    "valid_ic": -0.005573627574330093,
+    "live_ic": -0.03041482547807085,
+    "week_return": 3.077714681625366,
+    "market_return": 2.367746114730835,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2025W08",
+    "model_week": "2025W07",
+    "valid_ic": 0.02897709116605631,
+    "live_ic": -0.003959688975741566,
+    "week_return": -0.045305147767066956,
+    "market_return": 1.3501685857772827,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2025W09",
+    "model_week": "2025W08",
+    "valid_ic": 0.024177888569883108,
+    "live_ic": -0.08280545023069855,
+    "week_return": 0.4488813281059265,
+    "market_return": 0.8802049160003662,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2025W10",
+    "model_week": "2025W09",
+    "valid_ic": 0.025788641890847796,
+    "live_ic": -0.12441857265084424,
+    "week_return": 1.991041898727417,
+    "market_return": 0.4939740002155304,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2025W11",
+    "model_week": "2025W10",
+    "valid_ic": 0.014136608150932088,
+    "live_ic": -0.032812336904889626,
+    "week_return": -0.4664030075073242,
+    "market_return": -1.4822227954864502,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2025W12",
+    "model_week": "2025W11",
+    "valid_ic": 0.020347236267137643,
+    "live_ic": 0.07404182674982542,
+    "week_return": 0.5556327700614929,
+    "market_return": 0.4390174448490143,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2025W13",
+    "model_week": "2025W12",
+    "valid_ic": 0.040535058112176205,
+    "live_ic": 0.04525783020192347,
+    "week_return": 0.24863436818122864,
+    "market_return": -2.0337209701538086,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2025W14",
+    "model_week": "2025W13",
+    "valid_ic": 0.04013093142218276,
+    "live_ic": -0.05627364845641436,
+    "week_return": -0.5730237364768982,
+    "market_return": 0.6471337080001831,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2025W15",
+    "model_week": "2025W14",
+    "valid_ic": 0.034196553113202056,
+    "live_ic": 0.1241557776490537,
+    "week_return": -6.505688190460205,
+    "market_return": -5.303857326507568,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2025W16",
+    "model_week": "2025W15",
+    "valid_ic": 0.011584412549710894,
+    "live_ic": 0.1288662658222403,
+    "week_return": -0.044384829699993134,
+    "market_return": 0.23728202283382416,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2025W17",
+    "model_week": "2025W16",
+    "valid_ic": 0.04077756278448023,
+    "live_ic": 0.02383203333917418,
+    "week_return": 4.9192657470703125,
+    "market_return": 2.4859437942504883,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2025W18",
+    "model_week": "2025W17",
+    "valid_ic": 0.02727328185788892,
+    "live_ic": 0.07849173826238373,
+    "week_return": 0.45321741700172424,
+    "market_return": 1.801302433013916,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2025W19",
+    "model_week": "2025W18",
+    "valid_ic": 0.03540135276197944,
+    "live_ic": 0.037678972844950274,
+    "week_return": 1.5056753158569336,
+    "market_return": 0.7146486639976501,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2025W20",
+    "model_week": "2025W19",
+    "valid_ic": 0.027746656832421203,
+    "live_ic": 0.01438763667795855,
+    "week_return": 6.115468502044678,
+    "market_return": 3.6407415866851807,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2025W21",
+    "model_week": "2025W20",
+    "valid_ic": 0.02863010903119448,
+    "live_ic": 0.013683694069040148,
+    "week_return": 0.40797358751296997,
+    "market_return": 0.23699548840522766,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2025W22",
+    "model_week": "2025W21",
+    "valid_ic": 0.029728816750038276,
+    "live_ic": -0.0024710880807349333,
+    "week_return": 1.5642842054367065,
+    "market_return": 0.47366753220558167,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2025W23",
+    "model_week": "2025W22",
+    "valid_ic": 0.03761271295416501,
+    "live_ic": 0.11127410655243705,
+    "week_return": 3.3548407554626465,
+    "market_return": 1.272166132926941,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2025W24",
+    "model_week": "2025W23",
+    "valid_ic": 0.04153674257474296,
+    "live_ic": 0.03171523514392121,
+    "week_return": 0.985226035118103,
+    "market_return": 1.299291729927063,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2025W25",
+    "model_week": "2025W24",
+    "valid_ic": 0.0435191138841761,
+    "live_ic": -0.032025695103296496,
+    "week_return": -1.1345453262329102,
+    "market_return": -0.0350625216960907,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2025W26",
+    "model_week": "2025W25",
+    "valid_ic": 0.047357493540109284,
+    "live_ic": 0.0005923364425359827,
+    "week_return": 3.877472162246704,
+    "market_return": 4.067739486694336,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2025W27",
+    "model_week": "2025W26",
+    "valid_ic": 0.021795997674013412,
+    "live_ic": -0.010498523885844904,
+    "week_return": 0.3796955943107605,
+    "market_return": 1.6081074476242065,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2025W28",
+    "model_week": "2025W27",
+    "valid_ic": 0.03336109724901383,
+    "live_ic": -0.03829680355556128,
+    "week_return": 1.7852342128753662,
+    "market_return": -0.35352709889411926,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2025W29",
+    "model_week": "2025W28",
+    "valid_ic": 0.039091708305113625,
+    "live_ic": 0.018840345117218386,
+    "week_return": 2.484266996383667,
+    "market_return": 2.222461700439453,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2025W30",
+    "model_week": "2025W29",
+    "valid_ic": 0.009430439215003921,
+    "live_ic": 0.038242753558751244,
+    "week_return": 0.5893974304199219,
+    "market_return": 0.4049696922302246,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2025W31",
+    "model_week": "2025W30",
+    "valid_ic": 0.03235777813509079,
+    "live_ic": 0.08281937705042816,
+    "week_return": 3.5268545150756836,
+    "market_return": -0.6793157458305359,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2025W32",
+    "model_week": "2025W31",
+    "valid_ic": 0.01910100108383603,
+    "live_ic": 0.09830931127313228,
+    "week_return": 5.550296783447266,
+    "market_return": 2.4643137454986572,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2025W33",
+    "model_week": "2025W32",
+    "valid_ic": 0.03598908111435842,
+    "live_ic": -0.008590400511265205,
+    "week_return": 3.2048423290252686,
+    "market_return": 1.785733699798584,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2025W34",
+    "model_week": "2025W33",
+    "valid_ic": 0.03601212566854959,
+    "live_ic": 0.039769065215572726,
+    "week_return": -3.695058822631836,
+    "market_return": -0.7078046202659607,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2025W35",
+    "model_week": "2025W34",
+    "valid_ic": 0.03947202165820659,
+    "live_ic": 0.06518890154493584,
+    "week_return": 1.238289713859558,
+    "market_return": 1.8123462200164795,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2025W36",
+    "model_week": "2025W35",
+    "valid_ic": 0.031200575136233137,
+    "live_ic": 0.04132893524821153,
+    "week_return": -2.538651704788208,
+    "market_return": -0.5147275924682617,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2025W37",
+    "model_week": "2025W36",
+    "valid_ic": 0.012696529448192696,
+    "live_ic": -0.03163705672644083,
+    "week_return": 3.6268718242645264,
+    "market_return": 2.306060552597046,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2025W38",
+    "model_week": "2025W37",
+    "valid_ic": 0.0288426309582287,
+    "live_ic": 0.03185575948571055,
+    "week_return": 0.9301933646202087,
+    "market_return": 1.6305429935455322,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2025W39",
+    "model_week": "2025W38",
+    "valid_ic": 0.0599154349267539,
+    "live_ic": -0.033234715494034194,
+    "week_return": -1.8535295724868774,
+    "market_return": 0.010334007441997528,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2025W40",
+    "model_week": "2025W39",
+    "valid_ic": 0.05898696097579506,
+    "live_ic": -0.14112428819133477,
+    "week_return": -0.17338994145393372,
+    "market_return": 1.7654253244400024,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2025W41",
+    "model_week": "2025W40",
+    "valid_ic": 0.0188580667374979,
+    "live_ic": -0.05409990545724817,
+    "week_return": 4.675159454345703,
+    "market_return": 2.111867666244507,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2025W42",
+    "model_week": "2025W41",
+    "valid_ic": 0.042205868913331494,
+    "live_ic": 0.00877670760723609,
+    "week_return": 4.9790425300598145,
+    "market_return": 2.732954978942871,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2025W43",
+    "model_week": "2025W42",
+    "valid_ic": -0.004415128331403078,
+    "live_ic": -0.005868719338116555,
+    "week_return": 3.5007362365722656,
+    "market_return": -0.16389784216880798,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2025W44",
+    "model_week": "2025W43",
+    "valid_ic": 0.04086348549551256,
+    "live_ic": -0.00922498435729257,
+    "week_return": 1.2249468564987183,
+    "market_return": 1.1553634405136108,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2025W45",
+    "model_week": "2025W44",
+    "valid_ic": 0.028916684849871355,
+    "live_ic": -0.007561541994246834,
+    "week_return": -1.4035954475402832,
+    "market_return": -0.6552231907844543,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2025W46",
+    "model_week": "2025W45",
+    "valid_ic": 0.016577499961059637,
+    "live_ic": 0.05484616226695249,
+    "week_return": 1.2530604600906372,
+    "market_return": 0.81637042760849,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2025W47",
+    "model_week": "2025W46",
+    "valid_ic": 0.01308827099161169,
+    "live_ic": 0.032088701350748844,
+    "week_return": -4.266712188720703,
+    "market_return": -3.715717315673828,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2025W48",
+    "model_week": "2025W47",
+    "valid_ic": 0.03666047957498956,
+    "live_ic": 0.0572528823698607,
+    "week_return": 5.875851631164551,
+    "market_return": 3.8475594520568848,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2025W49",
+    "model_week": "2025W48",
+    "valid_ic": 0.034412369634831824,
+    "live_ic": 0.001035617306985484,
+    "week_return": 0.5531858801841736,
+    "market_return": 0.2503034472465515,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2025W50",
+    "model_week": "2025W49",
+    "valid_ic": 0.03824277802459858,
+    "live_ic": 0.03132400975291195,
+    "week_return": -0.6477763056755066,
+    "market_return": 0.6654666066169739,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2025W51",
+    "model_week": "2025W50",
+    "valid_ic": 0.019551986515103606,
+    "live_ic": 0.02565291776407345,
+    "week_return": -1.893027663230896,
+    "market_return": -0.06422537565231323,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2025W52",
+    "model_week": "2025W51",
+    "valid_ic": 0.01862612699941446,
+    "live_ic": -0.11178581377021399,
+    "week_return": -0.04483912140130997,
+    "market_return": 0.8094920516014099,
+    "factor_count": 250
+  },
+  {
+    "predict_week": "2026W01",
+    "model_week": "2025W52",
+    "valid_ic": 0.022270917950210335,
+    "live_ic": -0.21368573048356299,
+    "week_return": -1.3455638885498047,
+    "market_return": 0.7617098689079285,
+    "factor_count": 250
+  }
+]
