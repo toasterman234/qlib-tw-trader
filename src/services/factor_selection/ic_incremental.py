@@ -231,6 +231,8 @@ class ICIncrementalSelector(FactorSelector):
         def calc_spearman_ic(group: pd.DataFrame) -> float:
             if len(group) < 10:
                 return np.nan
+            if group["pred"].nunique() == 1 or group["label"].nunique() == 1:
+                return np.nan
             return group["pred"].corr(group["label"], method="spearman")
 
         daily_ic = pred_df.groupby(level="datetime").apply(calc_spearman_ic)

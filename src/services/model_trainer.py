@@ -440,14 +440,30 @@ class ModelTrainer:
 
             # 計算 IC
             predictions = model.predict(X_valid_norm.values)
+
+            # 模型退化檢查：預測值全部相同代表超參數組合不佳
+            if np.unique(predictions).size <= 1:
+                logger.debug(
+                    f"Optuna trial {trial_count[0] + 1}: constant predictions "
+                    f"(leaves={params['num_leaves']}, depth={params['max_depth']}, "
+                    f"min_leaf={params['min_data_in_leaf']}, "
+                    f"L1={params['lambda_l1']:.3f}, L2={params['lambda_l2']:.3f})"
+                )
+                return 0.0
+
             pred_df = pd.DataFrame({
                 "pred": predictions,
                 "label": y_valid.values,
             }, index=y_valid.index)
 
-            daily_ic = pred_df.groupby(level="datetime").apply(
-                lambda g: g["pred"].corr(g["label"]) if len(g) >= 2 else np.nan
-            )
+            def calc_ic(g: pd.DataFrame) -> float:
+                if len(g) < 10:
+                    return np.nan
+                if g["pred"].nunique() == 1 or g["label"].nunique() == 1:
+                    return np.nan
+                return g["pred"].corr(g["label"], method="spearman")
+
+            daily_ic = pred_df.groupby(level="datetime").apply(calc_ic)
             mean_ic = daily_ic.mean()
             ic = float(mean_ic) if not np.isnan(mean_ic) else 0.0
 
@@ -584,7 +600,9 @@ class ModelTrainer:
 
         # 計算每日截面 IC（使用 Spearman，與 Live IC 保持一致）
         def calc_spearman_ic(group: pd.DataFrame) -> float:
-            if len(group) < 10:  # 至少需要 10 個股票
+            if len(group) < 10:
+                return np.nan
+            if group["pred"].nunique() == 1 or group["label"].nunique() == 1:
                 return np.nan
             return group["pred"].corr(group["label"], method="spearman")
 
@@ -624,7 +642,9 @@ class ModelTrainer:
 
         # 計算每日截面 IC（使用 Spearman，與 Live IC 保持一致）
         def calc_spearman_ic(group: pd.DataFrame) -> float:
-            if len(group) < 10:  # 至少需要 10 個股票
+            if len(group) < 10:
+                return np.nan
+            if group["pred"].nunique() == 1 or group["label"].nunique() == 1:
                 return np.nan
             return group["pred"].corr(group["label"], method="spearman")
 
@@ -926,7 +946,9 @@ class ModelTrainer:
 
             # 計算每日截面 IC（使用 Spearman，與 Live IC 保持一致）
             def calc_spearman_ic(group: pd.DataFrame) -> float:
-                if len(group) < 10:  # 至少需要 10 個股票
+                if len(group) < 10:
+                    return np.nan
+                if group[factor.name].nunique() == 1 or group["label"].nunique() == 1:
                     return np.nan
                 return group[factor.name].corr(group["label"], method="spearman")
 

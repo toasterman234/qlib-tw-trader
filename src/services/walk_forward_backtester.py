@@ -576,13 +576,15 @@ class WalkForwardBacktester:
             ret_row = returns_wide.loc[dt].dropna()
 
             common_stocks = pred_row.index.intersection(ret_row.index)
-            if len(common_stocks) < 10:  # 至少需要 10 個股票
+            if len(common_stocks) < 10:
                 continue
 
-            ic, _ = stats.spearmanr(
-                pred_row[common_stocks].values,
-                ret_row[common_stocks].values,
-            )
+            pred_vals = pred_row[common_stocks].values
+            ret_vals = ret_row[common_stocks].values
+            if np.unique(pred_vals).size == 1 or np.unique(ret_vals).size == 1:
+                continue
+
+            ic, _ = stats.spearmanr(pred_vals, ret_vals)
             if not np.isnan(ic):
                 ics.append(ic)
 
