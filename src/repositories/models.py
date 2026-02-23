@@ -281,31 +281,6 @@ class TrainingFactorResult(Base):
 
 
 # =============================================================================
-# 交易記錄
-# =============================================================================
-
-
-class Trade(Base):
-    """交易記錄"""
-
-    __tablename__ = "trades"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    backtest_id: Mapped[int | None] = mapped_column(
-        Integer, ForeignKey("backtests.id"), nullable=True, index=True
-    )
-    date: Mapped[date] = mapped_column(Date, index=True)
-    stock_id: Mapped[str] = mapped_column(String(10), index=True)
-    side: Mapped[str] = mapped_column(String(10))  # buy/sell
-    shares: Mapped[int] = mapped_column(Integer)
-    price: Mapped[Decimal] = mapped_column(Numeric(10, 2))
-    amount: Mapped[Decimal] = mapped_column(Numeric(16, 2))
-    commission: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=0)
-    reason: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=now_taipei)
-
-
-# =============================================================================
 # 非同步任務
 # =============================================================================
 
@@ -323,23 +298,6 @@ class Job(Base):
     result: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON
     started_at: Mapped[datetime] = mapped_column(DateTime, default=now_taipei)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
-
-
-class Backtest(Base):
-    """回測記錄"""
-
-    __tablename__ = "backtests"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    model_id: Mapped[int] = mapped_column(Integer, ForeignKey("training_runs.id"))
-    start_date: Mapped[date] = mapped_column(Date)
-    end_date: Mapped[date] = mapped_column(Date)
-    initial_capital: Mapped[Decimal] = mapped_column(Numeric(16, 2))
-    max_positions: Mapped[int] = mapped_column(Integer, default=10)
-    result: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON
-    equity_curve: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON
-    status: Mapped[str] = mapped_column(String(20), default="queued")
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=now_taipei)
 
 
 class WalkForwardBacktest(Base):
@@ -367,26 +325,6 @@ class WalkForwardBacktest(Base):
     # 時間戳
     created_at: Mapped[datetime] = mapped_column(DateTime, default=now_taipei)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
-
-
-# =============================================================================
-# 超參數
-# =============================================================================
-
-
-class Hyperparams(Base):
-    """超參數組"""
-
-    __tablename__ = "hyperparams"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    name: Mapped[str] = mapped_column(String(100), unique=True)
-    cultivated_at: Mapped[datetime] = mapped_column(DateTime, default=now_taipei)
-    n_periods: Mapped[int] = mapped_column(Integer)
-    params_json: Mapped[str] = mapped_column(Text)  # LightGBM 超參數 JSON
-    stability_json: Mapped[str] = mapped_column(Text)  # 穩定性指標 JSON
-    periods_json: Mapped[str] = mapped_column(Text)  # 各窗口結果 JSON
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=now_taipei)
 
 
 # =============================================================================

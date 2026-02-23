@@ -41,7 +41,7 @@ curl -X POST http://localhost:8000/api/v1/qlib/export/sync \
 | 檔案 | 大小 | 說明 |
 |------|------|------|
 | `data/data.db` | ~131MB | SQLite 資料庫 |
-| `data/models/` | ~19MB | 訓練好的模型（156 週） |
+| `data/models/` | ~19MB | 訓練好的模型（154 週） |
 
 ### 常用指令
 
@@ -80,7 +80,7 @@ QlibExporter.export()  ← 指定日期範圍
     ↓
 data/qlib/*.bin
     ↓
-ModelTrainer / Backtester 使用
+ModelTrainer / WalkForwardBacktester 使用
 ```
 
 ### 日期範圍判斷
@@ -113,8 +113,8 @@ exporter.export(ExportConfig(
 
 ### 核心洞察
 
-超參數培養時使用全部因子（目前 263 個），但訓練時 IC 增量選擇只會選出部分因子。
-**超參數需要根據實際因子數量動態調整。**
+基準超參數是基於全部因子（263 個）調校的，但訓練時 IC 增量選擇只會選出部分因子。
+**超參數需要根據實際因子數量動態縮放。**
 
 ### 為什麼可以縮放？
 
@@ -211,7 +211,6 @@ df.sort_values(by=["score", "symbol"], ascending=[False, True]).head(top_k)
 |------|------|---------|
 | `analyze_intraday_price.py` | 日內價格分析：各時段與收盤價偏差、最佳買賣時段 | `python scripts/analyze_intraday_price.py` |
 | `simulate_timing.py` | 交易時段成本比較：早賣午買 vs 開盤 vs 收盤 | `python scripts/simulate_timing.py` |
-| `experiment_ic_selection.py` | IC 增量選擇法 vs RD-Agent 的完整回測實驗 | `python scripts/experiment_ic_selection.py` |
 
 ## 資料來源
 

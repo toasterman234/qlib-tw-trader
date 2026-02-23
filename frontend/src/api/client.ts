@@ -243,42 +243,12 @@ export interface ModelSummary {
   selection_method: string | null
 }
 
-export interface ModelListResponse {
-  items: ModelSummary[]
-  total: number
-}
-
 // 向後兼容
 export type ModelHistoryItem = ModelSummary
 
 export interface ModelHistoryResponse {
   items: ModelHistoryItem[]
   total: number
-}
-
-export interface ModelComparisonItem {
-  id: string
-  trained_at: string
-  ic: number | null
-  icir: number | null
-  factor_count: number | null
-}
-
-export interface ModelComparisonResponse {
-  models: ModelComparisonItem[]
-}
-
-export interface ModelStatus {
-  last_trained_at: string | null
-  days_since_training: number | null
-  needs_retrain: boolean
-  retrain_threshold_days: number
-  current_job: number | null
-  // 週訓練相關
-  current_week_id: string | null
-  latest_trained_week: string | null
-  untrained_weeks_count: number
-  current_factor_pool_hash: string | null
 }
 
 export interface TrainRequest {
@@ -328,17 +298,7 @@ export interface TrainResponse {
   message: string
 }
 
-export interface DataRangeResponse {
-  start: string
-  end: string
-}
-
 export interface DeleteResponse {
-  status: string
-  id: string
-}
-
-export interface SetCurrentResponse {
   status: string
   id: string
 }
@@ -368,30 +328,19 @@ export interface QualityResponse {
 }
 
 export const modelApi = {
-  // 新增的方法
-  list: () => api.get<ModelListResponse>('/models'),
   get: (id: string) => api.get<Model>(`/models/${id}`),
   delete: (id: string) => api.delete(`/models/${id}`).then(res => res.json() as Promise<DeleteResponse>),
   deleteAll: () => api.delete('/models/all').then(res => res.json() as Promise<{ deleted_count: number }>),
-  setCurrent: (id: string) => api.patch<SetCurrentResponse>(`/models/${id}/current`),
-  dataRange: () => api.get<DataRangeResponse>('/models/data-range'),
 
   // 週訓練
   weeks: () => api.get<WeeksResponse>('/models/weeks'),
   train: (data: TrainRequest) => api.post<TrainResponse>('/models/train', data),
   trainBatch: (data: TrainBatchRequest) => api.post<TrainResponse>('/models/train-batch', data),
 
-  // 現有方法（向後兼容）
-  current: () => api.get<Model>('/models/current'),
   history: (limit?: number) => {
     const query = limit ? `?limit=${limit}` : ''
     return api.get<ModelHistoryResponse>(`/models/history${query}`)
   },
-  comparison: (limit?: number) => {
-    const query = limit ? `?limit=${limit}` : ''
-    return api.get<ModelComparisonResponse>(`/models/comparison${query}`)
-  },
-  status: () => api.get<ModelStatus>('/models/status'),
 
   // 品質監控
   quality: (limit?: number) => {
@@ -400,78 +349,7 @@ export const modelApi = {
   },
 }
 
-// Hyperparams Types
-export interface CultivationPeriod {
-  train_start: string
-  train_end: string
-  valid_start: string
-  valid_end: string
-  best_ic: number
-  params: Record<string, number>
-}
-
-export interface HyperparamsSummary {
-  id: number
-  name: string
-  cultivated_at: string
-  n_periods: number
-  learning_rate: number | null
-  num_leaves: number | null
-  lambda_l1: number | null
-  lambda_l2: number | null
-}
-
-export interface HyperparamsDetail extends HyperparamsSummary {
-  params: Record<string, number>
-  stability: Record<string, number>
-  periods: CultivationPeriod[]
-}
-
-export interface HyperparamsListResponse {
-  items: HyperparamsSummary[]
-  total: number
-}
-
-export interface CultivateRequest {
-  name: string
-  n_periods?: number
-  n_trials_per_period?: number
-}
-
-export interface CultivateResponse {
-  job_id: string
-  status: string
-  message: string
-}
-
-export const hyperparamsApi = {
-  list: () => api.get<HyperparamsListResponse>('/hyperparams'),
-  get: (id: number) => api.get<HyperparamsDetail>(`/hyperparams/${id}`),
-  cultivate: (data: CultivateRequest) => api.post<CultivateResponse>('/hyperparams', data),
-  update: (id: number, data: { name: string }) => api.patch<HyperparamsDetail>(`/hyperparams/${id}`, data),
-  delete: (id: number) => api.delete(`/hyperparams/${id}`).then(res => res.json() as Promise<{ status: string; id: number }>),
-}
-
 // Portfolio Types
-export interface PositionItem {
-  symbol: string
-  name: string | null
-  shares: number
-  avg_cost: number
-  current_price: number | null
-  market_value: number | null
-  unrealized_pnl: number | null
-  unrealized_pnl_pct: number | null
-  weight: number | null
-}
-
-export interface PositionsResponse {
-  as_of: string
-  total_value: number
-  cash: number
-  positions: PositionItem[]
-}
-
 export interface PredictionRequest {
   model_id: number
   top_k: number
@@ -492,82 +370,9 @@ export interface PredictionsResponse {
   signals: PredictionSignal[]
 }
 
-export interface TradeItem {
-  id: number
-  date: string
-  symbol: string
-  name: string | null
-  side: string
-  shares: number
-  price: number
-  amount: number
-  commission: number
-  reason: string | null
-}
-
-export interface TradesResponse {
-  items: TradeItem[]
-  total: number
-}
-
 export const portfolioApi = {
-  positions: () => api.get<PositionsResponse>('/positions'),
   generatePredictions: (data: PredictionRequest) =>
     api.post<PredictionsResponse>('/predictions/generate', data),
-  trades: (params?: { start_date?: string; end_date?: string; symbol?: string }) => {
-    const searchParams = new URLSearchParams()
-    if (params?.start_date) searchParams.set('start_date', params.start_date)
-    if (params?.end_date) searchParams.set('end_date', params.end_date)
-    if (params?.symbol) searchParams.set('symbol', params.symbol)
-    const query = searchParams.toString() ? `?${searchParams.toString()}` : ''
-    return api.get<TradesResponse>(`/trades${query}`)
-  },
-}
-
-// Performance Types
-export interface Returns {
-  today: number | null
-  wtd: number | null
-  mtd: number | null
-  ytd: number | null
-  total: number | null
-}
-
-export interface PerformanceSummary {
-  as_of: string
-  returns: Returns
-  benchmark_returns: Returns
-  alpha: {
-    mtd: number | null
-    ytd: number | null
-  }
-}
-
-export interface EquityCurvePoint {
-  date: string
-  portfolio_value: number
-  cumulative_return: number
-  benchmark_return: number | null
-}
-
-export interface MonthlyReturn {
-  year: number
-  month: number
-  return: number
-  benchmark: number | null
-}
-
-export const performanceApi = {
-  summary: () => api.get<PerformanceSummary>('/performance/summary'),
-  equityCurve: (params?: { start_date?: string; end_date?: string; benchmark?: boolean }) => {
-    const searchParams = new URLSearchParams()
-    if (params?.start_date) searchParams.set('start_date', params.start_date)
-    if (params?.end_date) searchParams.set('end_date', params.end_date)
-    if (params?.benchmark !== undefined) searchParams.set('benchmark', String(params.benchmark))
-    const query = searchParams.toString() ? `?${searchParams.toString()}` : ''
-    return api.get<{ data: EquityCurvePoint[] }>(`/performance/equity-curve${query}`)
-  },
-  monthly: () => api.get<{ data: MonthlyReturn[] }>('/performance/monthly'),
 }
 
 // Dashboard Types
@@ -635,184 +440,6 @@ export const jobApi = {
   },
   get: (jobId: string) => api.get<JobDetail>(`/jobs/${jobId}`),
   cancel: (jobId: string) => api.delete(`/jobs/${jobId}`).then(res => res.json() as Promise<{ status: string; id: string }>),
-}
-
-// Backtest Types
-export interface BacktestMetrics {
-  // 核心指標
-  total_return_with_cost: number | null
-  total_return_without_cost: number | null
-  annual_return_with_cost: number | null
-  annual_return_without_cost: number | null
-  sharpe_ratio: number | null
-  max_drawdown: number | null
-  win_rate: number | null
-  total_trades: number | null
-  total_cost: number | null
-  // 市場基準
-  market_return: number | null
-  market_hit_rate: number | null
-  market_stocks_up: number | null
-  market_stocks_down: number | null
-  // 超額表現
-  excess_return: number | null
-  excess_hit_rate: number | null
-  alpha: number | null
-  // 風險調整指標
-  sortino_ratio: number | null
-  information_ratio: number | null
-  calmar_ratio: number | null
-  // 向後兼容
-  total_return: number | null
-  annual_return: number | null
-  profit_factor: number | null
-}
-
-// 多期統計
-export interface PeriodSummary {
-  period: string
-  model_return: number
-  market_return: number
-  excess_return: number
-  win_rate: number
-  market_hit_rate: number
-  beat_market: boolean
-}
-
-export interface BacktestSummary {
-  selection_method: string | null
-  n_periods: number
-  cumulative_return: number
-  cumulative_excess_return: number
-  avg_period_return: number
-  avg_excess_return: number
-  period_win_rate: number
-  return_std: number
-  excess_return_std: number
-  t_statistic: number | null
-  p_value: number | null
-  ci_lower: number | null
-  ci_upper: number | null
-  is_significant: boolean
-  periods: PeriodSummary[]
-}
-
-export interface EquityCurvePoint {
-  date: string
-  equity: number
-  benchmark: number | null
-  drawdown: number | null
-}
-
-export interface BacktestItem {
-  id: number
-  model_id: number
-  start_date: string
-  end_date: string
-  initial_capital: number
-  max_positions: number
-  status: string
-  metrics: BacktestMetrics | null
-  created_at: string
-}
-
-export interface BacktestDetail extends BacktestItem {
-  equity_curve: EquityCurvePoint[] | null
-}
-
-export interface BacktestListResponse {
-  items: BacktestItem[]
-  total: number
-}
-
-export interface BacktestRequest {
-  model_id: number
-  initial_capital?: number
-  max_positions?: number
-  trade_price?: 'close' | 'open'  // 交易價格：收盤價或開盤價
-}
-
-export interface BacktestRunResponse {
-  backtest_id: number
-  job_id: string
-  status: string
-  message: string
-}
-
-export interface StockTradeInfo {
-  stock_id: string
-  name: string
-  buy_count: number
-  sell_count: number
-  total_pnl: number | null
-}
-
-export interface StockTradeListResponse {
-  backtest_id: number
-  items: StockTradeInfo[]
-  total: number
-}
-
-export interface KlinePoint {
-  date: string
-  open: number
-  high: number
-  low: number
-  close: number
-  volume: number
-}
-
-export interface TradePoint {
-  date: string
-  side: 'buy' | 'sell'
-  price: number
-  shares: number
-  amount?: number
-  commission?: number
-  pnl?: number | null  // 賣出時的盈虧金額
-  pnl_pct?: number | null  // 賣出時的盈虧 %
-  holding_days?: number | null  // 持有天數
-  stock_id?: string  // 股票代碼（全局交易列表用）
-  stock_name?: string  // 股票名稱
-}
-
-export interface AllTradesResponse {
-  backtest_id: number
-  items: TradePoint[]
-  total_pnl: number  // 已實現盈虧
-  unrealized_pnl: number  // 未實現盈虧（持倉）
-  total_equity_pnl: number  // 總計（已實現 + 未實現）
-  total: number
-}
-
-export interface StockKlineResponse {
-  stock_id: string
-  name: string
-  klines: KlinePoint[]
-  trades: TradePoint[]
-}
-
-export const backtestApi = {
-  list: (modelId?: number, limit?: number) => {
-    const params = new URLSearchParams()
-    if (modelId) params.set('model_id', String(modelId))
-    if (limit) params.set('limit', String(limit))
-    const query = params.toString() ? `?${params.toString()}` : ''
-    return api.get<BacktestListResponse>(`/backtest${query}`)
-  },
-  get: (backtestId: number) => api.get<BacktestDetail>(`/backtest/${backtestId}`),
-  run: (data: BacktestRequest) => api.post<BacktestRunResponse>('/backtest/run', data),
-  getStocks: (backtestId: number) => api.get<StockTradeListResponse>(`/backtest/${backtestId}/stocks`),
-  getStockKline: (backtestId: number, stockId: string) =>
-    api.get<StockKlineResponse>(`/backtest/${backtestId}/stocks/${stockId}`),
-  getAllTrades: (backtestId: number) => api.get<AllTradesResponse>(`/backtest/${backtestId}/trades`),
-  delete: (backtestId: number) => api.delete(`/backtest/${backtestId}`),
-  summary: (selectionMethod?: string) => {
-    const params = new URLSearchParams()
-    if (selectionMethod) params.set('selection_method', selectionMethod)
-    const query = params.toString() ? `?${params.toString()}` : ''
-    return api.get<BacktestSummary>(`/backtest/summary${query}`)
-  },
 }
 
 // Dataset Types
@@ -1191,6 +818,13 @@ export const syncApi = {
 // =============================================================================
 // Walk-Forward Backtest Types
 // =============================================================================
+
+export interface EquityCurvePoint {
+  date: string
+  equity: number
+  benchmark: number | null
+  drawdown: number | null
+}
 
 export interface WeekStatus {
   week_id: string

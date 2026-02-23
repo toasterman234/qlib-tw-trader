@@ -9,7 +9,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.interfaces.exceptions import register_exception_handlers
-from src.interfaces.routers import backtest, dashboard, datasets, factor, hyperparams, model, performance, portfolio, qlib, sync, system, universe, websocket
+from src.interfaces.routers import backtest, dashboard, datasets, factor, model, portfolio, qlib, sync, system, universe, websocket
 from src.repositories.database import init_db
 
 
@@ -41,10 +41,8 @@ def create_app() -> FastAPI:
     app.include_router(datasets.router, prefix="/api/v1/datasets", tags=["datasets"])
     app.include_router(system.router, prefix="/api/v1/system", tags=["system"])
     app.include_router(factor.router, prefix="/api/v1/factors", tags=["factors"])
-    app.include_router(hyperparams.router, prefix="/api/v1/hyperparams", tags=["hyperparams"])
     app.include_router(model.router, prefix="/api/v1/models", tags=["models"])
     app.include_router(portfolio.router, prefix="/api/v1", tags=["portfolio"])
-    app.include_router(performance.router, prefix="/api/v1/performance", tags=["performance"])
     app.include_router(dashboard.router, prefix="/api/v1/dashboard", tags=["dashboard"])
     app.include_router(websocket.router, prefix="/api/v1", tags=["websocket"])
     app.include_router(backtest.router, prefix="/api/v1/backtest", tags=["backtest"])

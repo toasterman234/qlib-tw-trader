@@ -5,7 +5,6 @@
 import asyncio
 import json
 import shutil
-from datetime import timedelta
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -13,18 +12,11 @@ from sqlalchemy.orm import Session
 
 from src.interfaces.dependencies import get_db
 from src.interfaces.schemas.model import (
-    CultivationRequest,
-    CultivationResponse,
     DataRange,
     FactorSummary,
-    HyperparamsInfo,
-    ModelComparisonItem,
-    ModelComparisonResponse,
     ModelHistoryResponse,
-    ModelListResponse,
     ModelMetrics,
     ModelResponse,
-    ModelStatus,
     ModelSummary,
     Period,
     QualityMetricsItem,
@@ -40,13 +32,9 @@ from src.interfaces.schemas.model import (
 from src.repositories.factor import FactorRepository
 from src.repositories.training import TrainingRepository
 from src.services.job_manager import broadcast_data_updated
-from src.shared.constants import EMBARGO_DAYS, RETRAIN_THRESHOLD_DAYS, TRAIN_DAYS, VALID_DAYS
 from src.shared.week_utils import (
     compute_factor_pool_hash,
-    compute_week_id,
-    get_current_week_id,
     get_trainable_weeks,
-    get_week_valid_end,
 )
 
 router = APIRouter()
@@ -157,37 +145,7 @@ def _parse_model_id(model_id: str) -> int:
 
 
 # === 端點定義 ===
-# 注意：固定路由（/current, /status 等）必須放在動態路由（/{model_id}）之前
-
-
-@router.get("", response_model=ModelListResponse)
-async def list_models(
-    session: Session = Depends(get_db),
-):
-    """取得所有模型列表"""
-    repo = TrainingRepository(session)
-    runs = repo.get_all()
-
-    items = [_run_to_summary(run) for run in runs]
-    return ModelListResponse(items=items, total=len(items))
-
-
-@router.get("/current", response_model=ModelResponse)
-async def get_current_model(
-    session: Session = Depends(get_db),
-):
-    """取得當前 active 模型"""
-    repo = TrainingRepository(session)
-    run = repo.get_current()
-
-    if not run:
-        raise HTTPException(status_code=404, detail="No model found")
-
-    # 取得選中的因子
-    results = repo.get_selected_factors(run.id)
-    factors = [r.factor.name for r in results]
-
-    return _run_to_response(run, factors)
+# 注意：固定路由必須放在動態路由（/{model_id}）之前
 
 
 @router.get("/history", response_model=ModelHistoryResponse)
@@ -201,101 +159,6 @@ async def get_model_history(
 
     items = [_run_to_summary(run) for run in runs]
     return ModelHistoryResponse(items=items, total=len(items))
-
-
-@router.get("/comparison", response_model=ModelComparisonResponse)
-async def get_model_comparison(
-    limit: int = Query(10, ge=1, le=50),
-    session: Session = Depends(get_db),
-):
-    """取得模型指標比較（用於圖表）"""
-    repo = TrainingRepository(session)
-    runs = repo.get_history(limit=limit)
-
-    models = []
-    for run in runs:
-        trained_at = run.completed_at or run.started_at
-        models.append(
-            ModelComparisonItem(
-                id=f"m{run.id:03d}",
-                trained_at=trained_at.strftime("%Y-%m-%d") if trained_at else "",
-                ic=float(run.model_ic) if run.model_ic else None,
-                icir=float(run.icir) if run.icir else None,
-                factor_count=run.factor_count,
-            )
-        )
-
-    return ModelComparisonResponse(models=models)
-
-
-@router.get("/status", response_model=ModelStatus)
-async def get_training_status(
-    session: Session = Depends(get_db),
-):
-    """取得訓練狀態（用於檢查是否需要重訓）"""
-    from sqlalchemy import func
-    from src.repositories.models import StockDaily
-
-    repo = TrainingRepository(session)
-    status = repo.get_status()
-
-    # 計算週訓練相關資訊
-    current_week = get_current_week_id()
-
-    # 取得最新已訓練的週
-    all_runs = repo.get_all()
-    trained_weeks = [r.week_id for r in all_runs if r.week_id and r.status == "completed"]
-    latest_trained_week = max(trained_weeks) if trained_weeks else None
-
-    # 計算未訓練週數
-    db_range = session.query(
-        func.min(StockDaily.date),
-        func.max(StockDaily.date),
-    ).first()
-
-    untrained_count = 0
-    current_hash = None
-    if db_range and db_range[0] and db_range[1]:
-        factor_repo = FactorRepository(session)
-        enabled_factors = factor_repo.get_all(enabled=True)
-        current_hash = compute_factor_pool_hash([f.id for f in enabled_factors])
-
-        trainable_weeks = get_trainable_weeks(
-            data_start=db_range[0],
-            data_end=db_range[1],
-            session=session,
-        )
-        trained_set = set(trained_weeks)
-        untrained_count = sum(1 for w in trainable_weeks if w.week_id not in trained_set)
-
-    return ModelStatus(
-        **status,
-        current_week_id=current_week,
-        latest_trained_week=latest_trained_week,
-        untrained_weeks_count=untrained_count,
-        current_factor_pool_hash=current_hash,
-    )
-
-
-@router.get("/data-range")
-async def get_data_range(session: Session = Depends(get_db)):
-    """取得資料庫中可用的日期範圍（用於訓練/回測）"""
-    from sqlalchemy import func
-    from src.repositories.models import StockDaily
-
-    # 查詢 stock_daily 表的日期範圍
-    result = session.query(
-        func.min(StockDaily.date),
-        func.max(StockDaily.date),
-    ).first()
-
-    if not result or not result[0] or not result[1]:
-        raise HTTPException(status_code=404, detail="No stock data found in database")
-
-    return {
-        "start": result[0].isoformat(),
-        "end": result[1].isoformat(),
-    }
 
 
 @router.get("/weeks", response_model=WeeksResponse)
@@ -389,31 +252,6 @@ async def list_weeks(session: Session = Depends(get_db)):
     )
 
 
-@router.get("/hyperparams", response_model=HyperparamsInfo)
-async def get_hyperparams():
-    """取得已培養的超參數資訊"""
-    from src.services.model_trainer import ModelTrainer
-
-    info = ModelTrainer.get_cultivation_info()
-
-    if not info:
-        return HyperparamsInfo(
-            cultivated_at=None,
-            n_periods=None,
-            params=None,
-            stability=None,
-            periods=None,
-        )
-
-    return HyperparamsInfo(
-        cultivated_at=info.get("cultivated_at"),
-        n_periods=info.get("n_periods"),
-        params=info.get("params"),
-        stability=info.get("stability"),
-        periods=info.get("periods"),
-    )
-
-
 @router.get("/quality", response_model=QualityResponse)
 async def get_quality_metrics(
     limit: int = Query(10, ge=1, le=50),
@@ -440,80 +278,6 @@ async def get_quality_metrics(
             "ic_std_max": QUALITY_IC_STD_MAX,
             "icir_min": QUALITY_ICIR_MIN,
         },
-    )
-
-
-@router.post("/cultivate-hyperparams", response_model=CultivationResponse)
-async def cultivate_hyperparams(
-    data: CultivationRequest,
-    session: Session = Depends(get_db),
-):
-    """
-    執行超參數培養（非同步）
-
-    基於 Walk Forward Optimization + Median Aggregation 方法：
-    - 生成多個歷史窗口
-    - 每個窗口獨立運行 Optuna
-    - 取各窗口最佳參數的中位數
-    - 計算穩定性指標 (CV < 0.3 = 穩定)
-    """
-    from src.repositories.database import get_session
-    from src.services.job_manager import job_manager
-    from src.services.model_trainer import ModelTrainer
-
-    factor_repo = FactorRepository(session)
-
-    # 確認有啟用的因子
-    enabled_factors = factor_repo.get_all(enabled=True)
-    if not enabled_factors:
-        raise HTTPException(status_code=400, detail="No enabled factors found")
-
-    # 定義培養任務
-    async def cultivation_task(progress_callback, **kwargs):
-        """培養任務 wrapper"""
-        task_session = get_session()
-        task_factor_repo = FactorRepository(task_session)
-        loop = asyncio.get_event_loop()
-
-        try:
-            factors = task_factor_repo.get_all(enabled=True)
-            trainer = ModelTrainer(qlib_data_dir="data/qlib")
-
-            # 同步回調轉非同步
-            def sync_progress(progress: float, message: str):
-                loop.call_soon_threadsafe(
-                    lambda: asyncio.create_task(progress_callback(progress, message))
-                )
-
-            # 使用 to_thread 運行同步培養
-            result = await asyncio.to_thread(
-                trainer.cultivate_hyperparameters,
-                factors=factors,
-                n_periods=data.n_periods,
-                n_trials_per_period=data.n_trials_per_period,
-                on_progress=sync_progress,
-            )
-
-            return {
-                "cultivated_at": result.cultivated_at,
-                "n_periods": result.n_periods,
-                "params": result.params,
-                "stability": result.stability,
-            }
-        finally:
-            task_session.close()
-
-    # 建立非同步培養任務
-    job_id = await job_manager.create_job(
-        job_type="cultivate",
-        task_fn=cultivation_task,
-        message=f"Cultivating hyperparameters ({data.n_periods} periods, {data.n_trials_per_period} trials/period)",
-    )
-
-    return CultivationResponse(
-        job_id=job_id,
-        status="queued",
-        message=f"超參數培養任務已排入佇列",
     )
 
 

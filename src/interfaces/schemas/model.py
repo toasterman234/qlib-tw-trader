@@ -69,13 +69,6 @@ class ModelSummary(BaseModel):
     selection_method: str | None = None  # 因子選擇方法
 
 
-class ModelListResponse(BaseModel):
-    """模型列表回應"""
-
-    items: list[ModelSummary]
-    total: int
-
-
 # 向後兼容的別名
 ModelHistoryItem = ModelSummary
 
@@ -85,37 +78,6 @@ class ModelHistoryResponse(BaseModel):
 
     items: list[ModelHistoryItem]
     total: int
-
-
-class ModelComparisonItem(BaseModel):
-    """模型比較項目"""
-
-    id: str
-    trained_at: str
-    ic: float | None
-    icir: float | None
-    factor_count: int | None
-
-
-class ModelComparisonResponse(BaseModel):
-    """模型比較回應"""
-
-    models: list[ModelComparisonItem]
-
-
-class ModelStatus(BaseModel):
-    """訓練狀態"""
-
-    last_trained_at: datetime | None
-    days_since_training: int | None
-    needs_retrain: bool
-    retrain_threshold_days: int
-    current_job: int | None
-    # 週訓練相關
-    current_week_id: str | None = None
-    latest_trained_week: str | None = None
-    untrained_weeks_count: int = 0
-    current_factor_pool_hash: str | None = None
 
 
 class DataRange(BaseModel):
@@ -176,42 +138,6 @@ class TrainResponse(BaseModel):
     job_id: str
     status: str
     message: str
-
-
-class CultivationPeriod(BaseModel):
-    """培養窗口結果"""
-
-    train_start: date
-    train_end: date
-    valid_start: date
-    valid_end: date
-    best_ic: float
-    params: dict
-
-
-class CultivationRequest(BaseModel):
-    """超參數培養請求"""
-
-    n_periods: int = 5  # 窗口數量
-    n_trials_per_period: int = 20  # 每窗口試驗次數
-
-
-class CultivationResponse(BaseModel):
-    """超參數培養回應"""
-
-    job_id: str
-    status: str
-    message: str
-
-
-class HyperparamsInfo(BaseModel):
-    """超參數資訊"""
-
-    cultivated_at: str | None
-    n_periods: int | None
-    params: dict | None
-    stability: dict[str, float] | None
-    periods: list[CultivationPeriod] | None
 
 
 class QualityMetricsItem(BaseModel):

@@ -1,12 +1,12 @@
 """
-交易記錄與預測 API
+預測 API
 """
 
 import asyncio
-from datetime import date, timedelta
+from datetime import timedelta
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -15,11 +15,8 @@ from src.interfaces.schemas.portfolio import (
     PredictionRequest,
     PredictionSignal,
     PredictionsResponse,
-    TradeItem,
-    TradesResponse,
 )
 from src.repositories.models import StockDaily, StockUniverse
-from src.repositories.portfolio import TradeRepository
 from src.repositories.training import TrainingRepository
 from src.services.predictor import Predictor
 from src.services.qlib_exporter import ExportConfig, QlibExporter
@@ -27,45 +24,6 @@ from src.services.qlib_exporter import ExportConfig, QlibExporter
 router = APIRouter()
 
 QLIB_DATA_DIR = Path("data/qlib")
-
-
-@router.get("/trades", response_model=TradesResponse)
-async def get_trades(
-    start_date: date | None = Query(None),
-    end_date: date | None = Query(None),
-    symbol: str | None = Query(None),
-    limit: int = Query(100, ge=1, le=1000),
-    session: Session = Depends(get_db),
-):
-    """取得交易紀錄"""
-    repo = TradeRepository(session)
-    trades = repo.get_all(
-        start_date=start_date,
-        end_date=end_date,
-        stock_id=symbol,
-        limit=limit,
-    )
-
-    # 取得股票名稱
-    stock_names = {s.stock_id: s.name for s in session.query(StockUniverse).all()}
-
-    items = [
-        TradeItem(
-            id=trade.id,
-            date=trade.date,
-            symbol=trade.stock_id,
-            name=stock_names.get(trade.stock_id),
-            side=trade.side,
-            shares=trade.shares,
-            price=float(trade.price),
-            amount=float(trade.amount),
-            commission=float(trade.commission),
-            reason=trade.reason,
-        )
-        for trade in trades
-    ]
-
-    return TradesResponse(items=items, total=len(items))
 
 
 @router.post("/predictions/generate", response_model=PredictionsResponse)
