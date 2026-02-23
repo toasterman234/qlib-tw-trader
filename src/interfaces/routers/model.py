@@ -390,7 +390,6 @@ async def trigger_training(
                 valid_end=valid_end,
                 factor_pool_hash=factor_pool_hash,
                 on_progress=sync_progress,
-                hyperparams_id=data.hyperparams_id,
             )
 
             return {
@@ -553,7 +552,6 @@ async def trigger_batch_training(
                     valid_end=valid_end,
                     factor_pool_hash=factor_pool_hash,
                     on_progress=sync_progress,
-                    hyperparams_id=data.hyperparams_id,
                 )
 
                 results.append({

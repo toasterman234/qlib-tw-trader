@@ -142,7 +142,6 @@ export function Training() {
     if (isTraining || !selectedWeekId) return
     setActionLoading(true)
     try {
-      // 不傳 hyperparams_id，系統會自動使用 Optuna 調參
       await modelApi.train({ week_id: selectedWeekId })
       await fetchData(false)
     } catch (err) {
@@ -167,7 +166,6 @@ export function Training() {
     setQueueYear(year)
 
     try {
-      // 使用後端批量訓練 API（不傳 hyperparams_id）
       await modelApi.trainBatch({ year })
       await fetchData(false)
     } catch (err) {

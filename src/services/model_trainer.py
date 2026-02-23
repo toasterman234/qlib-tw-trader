@@ -6,7 +6,7 @@ import hashlib
 import json
 import logging
 import pickle
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any, Callable
@@ -642,7 +642,6 @@ class ModelTrainer:
         week_id: str | None = None,
         factor_pool_hash: str | None = None,
         on_progress: Callable[[float, str], None] | None = None,
-        hyperparams_id: int | None = None,
     ) -> TrainingResult:
         """
         執行 LightGBM 訓練（週訓練架構）
@@ -662,7 +661,6 @@ class ModelTrainer:
             week_id: 週 ID（如 "2026W05"）
             factor_pool_hash: 因子池 hash
             on_progress: 進度回調 (progress: 0-100, message: str)
-            hyperparams_id: 指定超參數組 ID（None 則使用最新）
 
         Returns:
             TrainingResult
@@ -714,32 +712,13 @@ class ModelTrainer:
             if all_data.empty:
                 raise ValueError("No data available for the specified date range")
 
-            # === 超參數載入（從資料庫）===
-            from src.repositories.hyperparams import HyperparamsRepository
-
-            hp_repo = HyperparamsRepository(session)
-            # 使用指定的超參數組，或取得最新
-            hp = hp_repo.get_by_id(hyperparams_id) if hyperparams_id else hp_repo.get_latest()
-
-            if hp:
-                cultivated_params = json.loads(hp.params_json)
-                # 加入 GPU 設定
-                cultivated_params = cultivated_params.copy()
-                cultivated_params["device"] = "gpu"
-                cultivated_params["gpu_use_dp"] = False
-                self._optimized_params = cultivated_params
-                self._auto_optuna = False  # 有培養超參數，不需要自動調參
-                if on_progress:
-                    on_progress(10.0, f"Using hyperparams: {hp.name}")
-            else:
-                # 無培養超參數，先用保守預設值進行因子選擇
-                # 因子選擇後會自動運行 Optuna 找最佳超參數
-                self._optimized_params = get_conservative_default_params(len(enabled_factors))
-                self._optimized_params["device"] = "gpu"
-                self._optimized_params["gpu_use_dp"] = False
-                self._auto_optuna = True  # 標記需要自動運行 Optuna
-                if on_progress:
-                    on_progress(10.0, "No cultivated params, will auto-tune with Optuna")
+            # 使用保守預設值進行因子選擇，選擇後自動運行 Optuna 找最佳超參數
+            self._optimized_params = get_conservative_default_params(len(enabled_factors))
+            self._optimized_params["device"] = "gpu"
+            self._optimized_params["gpu_use_dp"] = False
+            self._auto_optuna = True
+            if on_progress:
+                on_progress(10.0, "Will auto-tune with Optuna after factor selection")
 
             # 執行因子選擇（IC 去重複）
             selected_factors, all_results, best_model, selection_stats = self._robust_factor_selection(

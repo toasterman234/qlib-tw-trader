@@ -253,12 +253,10 @@ export interface ModelHistoryResponse {
 
 export interface TrainRequest {
   week_id: string  // "2026W05"
-  hyperparams_id?: number  // 指定超參數組 ID
 }
 
 export interface TrainBatchRequest {
   year: string  // "2025"
-  hyperparams_id?: number  // 指定超參數組 ID
 }
 
 // Week Types

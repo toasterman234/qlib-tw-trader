@@ -122,14 +122,12 @@ class TrainRequest(BaseModel):
     """訓練請求"""
 
     week_id: str  # "2026W05"
-    hyperparams_id: int | None = None  # 指定超參數組 ID
 
 
 class TrainBatchRequest(BaseModel):
     """批量訓練請求"""
 
     year: str  # "2025"
-    hyperparams_id: int | None = None  # 指定超參數組 ID
 
 
 class TrainResponse(BaseModel):
