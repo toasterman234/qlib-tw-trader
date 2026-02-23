@@ -470,7 +470,7 @@ def phase3_walkforward(enable_incremental: bool = False):
         factors=rd_factors,
         start_date=first_predict_date,
         end_date=last_predict_date,
-        trade_price="open",
+        trade_price="close",
     )
 
     # 初始化 IncrementalLearner（如果啟用）
@@ -576,7 +576,7 @@ def _backtest_one_model(
 
         # 計算週收益
         week_return, market_return = backtester._calculate_week_return(
-            predictions, predict_start, predict_end, 10, "open"
+            predictions, predict_start, predict_end, 10, "close"
         )
 
         return {
@@ -931,7 +931,7 @@ def _generate_report(
         "| Embargo | 7 交易日 |",
         "| Label | Ref($close, -2) / Ref($close, -1) - 1 + CSRankNorm |",
         "| Top-K | 10（等權重） |",
-        "| 交易價格 | Open |",
+        "| 交易價格 | Close |",
         "| 超參數 | 相同（從資料庫培養超參數） |",
         "| 唯一差異 | 因子選擇策略 |",
         "",
