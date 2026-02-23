@@ -210,7 +210,7 @@ class WalkForwardRequest(BaseModel):
     end_week_id: str  # "2025W20"
     initial_capital: float = 1000000.0
     max_positions: int = 10
-    trade_price: str = "open"
+    trade_price: str = "close"
     enable_incremental: bool = False
     strategy: str = "topk"
 

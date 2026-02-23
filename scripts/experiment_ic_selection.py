@@ -470,7 +470,6 @@ def phase3_walkforward(enable_incremental: bool = False):
         factors=rd_factors,
         start_date=first_predict_date,
         end_date=last_predict_date,
-        trade_price="close",
     )
 
     # 初始化 IncrementalLearner（如果啟用）
@@ -576,7 +575,7 @@ def _backtest_one_model(
 
         # 計算週收益
         week_return, market_return = backtester._calculate_week_return(
-            predictions, predict_start, predict_end, 10, "close"
+            predictions, predict_start, predict_end, 10
         )
 
         return {

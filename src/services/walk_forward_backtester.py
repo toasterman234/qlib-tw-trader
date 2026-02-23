@@ -429,7 +429,6 @@ class WalkForwardBacktester:
         factors: list[dict],
         start_date: date,
         end_date: date,
-        trade_price: str = "open",
         on_progress: Callable[[float, str], None] | None = None,
     ) -> None:
         """
@@ -439,7 +438,6 @@ class WalkForwardBacktester:
             factors: 因子列表
             start_date: 開始日期
             end_date: 結束日期（會自動延伸以確保收益計算）
-            trade_price: 交易價格（"open" 或 "close"）
         """
         self._init_qlib()
         from qlib.data import D
@@ -465,10 +463,7 @@ class WalkForwardBacktester:
         if not self._features_cache.empty:
             self._features_cache.columns = names
 
-        # 2. 預載入價格資料（延伸 10 天以確保收益計算）
-        # 載入 open 和 close 兩個欄位：
-        # - close: 用於 Live IC 計算（與 Label 定義一致）
-        # - open/close: 用於週報酬計算（根據 trade_price 參數）
+        # 2. 預載入 close 價格（延伸 10 天以確保收益計算）
         if on_progress:
             on_progress(13, "Preloading price data...")
 
@@ -476,16 +471,16 @@ class WalkForwardBacktester:
 
         self._price_cache = D.features(
             instruments=instruments,
-            fields=["$open", "$close"],
+            fields=["$close"],
             start_time=start_date.strftime("%Y-%m-%d"),
             end_time=extended_end.strftime("%Y-%m-%d"),
         )
 
         if not self._price_cache.empty:
-            self._price_cache.columns = ["open", "close"]
+            self._price_cache.columns = ["close"]
 
         if on_progress:
-            on_progress(15, f"Data preloaded: {len(self._features_cache)} feature rows, {len(self._price_cache)} price rows (trade_price={trade_price})")
+            on_progress(15, f"Data preloaded: {len(self._features_cache)} feature rows, {len(self._price_cache)} price rows")
 
     def _clear_cache(self) -> None:
         """清除快取"""
@@ -609,7 +604,7 @@ class WalkForwardBacktester:
         end_week_id: str,
         initial_capital: float = 1_000_000.0,
         max_positions: int = 10,
-        trade_price: str = "open",
+        trade_price: str = "close",
         enable_incremental: bool = False,
         on_progress: Callable[[float, str], None] | None = None,
     ) -> WalkForwardResult:
@@ -621,7 +616,7 @@ class WalkForwardBacktester:
             end_week_id: 結束模型週（如 "2025W20"）
             initial_capital: 初始資金
             max_positions: 最大持倉數
-            trade_price: 交易價格（"open" 或 "close"）
+            trade_price: 交易價格（保留參數但內部統一使用 close）
             enable_incremental: 是否啟用增量學習（Phase 2 實作）
             on_progress: 進度回調
 
@@ -672,7 +667,6 @@ class WalkForwardBacktester:
             factors=first_factors,
             start_date=first_predict,
             end_date=last_predict,
-            trade_price=trade_price,
             on_progress=on_progress,
         )
 
@@ -750,9 +744,9 @@ class WalkForwardBacktester:
                 if info.valid_ic is not None and live_ic is not None and info.valid_ic != 0:
                     ic_decay = ((info.valid_ic - live_ic) / info.valid_ic) * 100
 
-                # 計算週收益（簡化版：Top-K 等權重）
+                # 計算週收益（日度調倉，close-to-close）
                 week_return, market_return = self._calculate_week_return(
-                    predictions, predict_start, predict_end, max_positions, trade_price
+                    predictions, predict_start, predict_end, max_positions
                 )
 
                 weekly_results.append(WeekResult(
@@ -814,19 +808,19 @@ class WalkForwardBacktester:
         predict_start: date,
         predict_end: date,
         max_positions: int,
-        trade_price: str = "open",
     ) -> tuple[float | None, float | None]:
         """
-        計算週收益（使用快取的價格資料）
+        計算週收益（日度調倉，close-to-close）
 
-        使用 Top-K 等權重策略
+        對每個預測日 T，用 prediction[T] 選 Top-K，
+        計算 close[T+2]/close[T+1]-1（對齊 label 定義）。
+        將所有日度收益複合為週收益。
 
         Args:
-            predictions: 預測分數 DataFrame
+            predictions: 預測分數 DataFrame (index=date, columns=stock_id)
             predict_start: 預測期開始日期
             predict_end: 預測期結束日期
             max_positions: 最大持倉數
-            trade_price: 交易價格（"open" 或 "close"）
 
         Returns:
             (week_return, market_return) in percentage
@@ -835,13 +829,13 @@ class WalkForwardBacktester:
         if not instruments:
             return None, None
 
-        # 選擇價格欄位
-        price_col = "open" if trade_price == "open" else "close"
+        # 擴展價格範圍：往後多取 7 天（涵蓋最後預測日的 T+2 交易日）
+        extended_end = predict_end + timedelta(days=7)
 
-        # 使用快取的價格資料（如果有）
+        # 取得 close 價格
         if self._price_cache is not None and not self._price_cache.empty:
             start_str = predict_start.strftime("%Y-%m-%d")
-            end_str = predict_end.strftime("%Y-%m-%d")
+            end_str = extended_end.strftime("%Y-%m-%d")
 
             price_df = self._price_cache.loc[
                 (self._price_cache.index.get_level_values("datetime") >= start_str) &
@@ -849,74 +843,97 @@ class WalkForwardBacktester:
                 (self._price_cache.index.get_level_values("instrument").isin(instruments))
             ].copy()
         else:
-            # 回退到直接查詢
             self._init_qlib()
             from qlib.data import D
 
-            qlib_field = f"${price_col}"
             price_df = D.features(
                 instruments=instruments,
-                fields=[qlib_field],
+                fields=["$close"],
                 start_time=predict_start.strftime("%Y-%m-%d"),
-                end_time=predict_end.strftime("%Y-%m-%d"),
+                end_time=extended_end.strftime("%Y-%m-%d"),
             )
-
             if not price_df.empty:
-                price_df.columns = [price_col]
+                price_df.columns = ["close"]
 
         if price_df.empty:
             return None, None
 
-        # 檢查價格欄位是否存在
-        if price_col not in price_df.columns:
-            # 回退到 close（相容舊快取）
-            price_col = "close"
-            if price_col not in price_df.columns:
-                return None, None
-
-        price_wide = price_df[price_col].unstack(level="instrument")
-
-        if price_wide.empty or len(price_wide) < 2:
+        if "close" not in price_df.columns:
             return None, None
 
-        # 期初和期末價格
-        start_prices = price_wide.iloc[0]
-        end_prices = price_wide.iloc[-1]
+        close_wide = price_df["close"].unstack(level="instrument")
+        trading_days = sorted(close_wide.index)
 
-        # 計算所有股票收益
-        all_returns = (end_prices - start_prices) / start_prices
-        all_returns = all_returns.dropna()
-
-        if all_returns.empty:
+        if len(trading_days) < 3:
             return None, None
 
-        # 市場平均收益
-        market_return = float(all_returns.mean() * 100)
+        # 日度調倉：對每個預測日 T 計算收益
+        portfolio_daily = []
+        market_daily = []
 
-        # 選擇 Top-K（使用第一天的預測分數）
-        first_date = predictions.index[0]
-        scores = predictions.loc[first_date].dropna()
+        for pred_date in sorted(predictions.index):
+            # 找到 T+1 和 T+2 交易日
+            future_days = [d for d in trading_days if d > pred_date]
+            if len(future_days) < 2:
+                continue
 
-        if scores.empty:
-            return None, market_return
+            t1 = future_days[0]  # T+1: 買入日 close
+            t2 = future_days[1]  # T+2: 賣出日 close
 
-        # 排序選股
-        scores_df = scores.reset_index()
-        scores_df.columns = ["symbol", "score"]
-        scores_df = scores_df.sort_values(
-            by=["score", "symbol"],
-            ascending=[False, True],
-        ).head(max_positions)
-        topk_stocks = scores_df["symbol"].tolist()
+            # 計算所有股票的日度收益 close[T+2]/close[T+1]-1
+            prices_t1 = close_wide.loc[t1].dropna()
+            prices_t2 = close_wide.loc[t2].dropna()
+            common = prices_t1.index.intersection(prices_t2.index)
 
-        # Top-K 收益
-        topk_returns = all_returns.reindex(topk_stocks).dropna()
-        if topk_returns.empty:
-            return None, market_return
+            if len(common) < 2:
+                continue
 
-        week_return = float(topk_returns.mean() * 100)
+            all_returns = (prices_t2[common] - prices_t1[common]) / prices_t1[common]
+            all_returns = all_returns.dropna()
 
-        return week_return, market_return
+            if all_returns.empty:
+                continue
+
+            # 市場日度收益
+            market_daily.append(float(all_returns.mean()))
+
+            # Top-K 選股
+            scores = predictions.loc[pred_date].dropna()
+            if scores.empty:
+                portfolio_daily.append(float(all_returns.mean()))
+                continue
+
+            scores_df = scores.reset_index()
+            scores_df.columns = ["symbol", "score"]
+            scores_df = scores_df.sort_values(
+                by=["score", "symbol"],
+                ascending=[False, True],
+            ).head(max_positions)
+            topk_stocks = scores_df["symbol"].tolist()
+
+            # Top-K 收益（限定有價格的股票）
+            topk_in_common = [s for s in topk_stocks if s in all_returns.index]
+            if not topk_in_common:
+                portfolio_daily.append(float(all_returns.mean()))
+                continue
+
+            portfolio_daily.append(float(all_returns[topk_in_common].mean()))
+
+        if not portfolio_daily:
+            return None, None
+
+        # 複合日度收益為週收益
+        week_compound = 1.0
+        for r in portfolio_daily:
+            week_compound *= (1 + r)
+        week_return = (week_compound - 1) * 100
+
+        market_compound = 1.0
+        for r in market_daily:
+            market_compound *= (1 + r)
+        market_return = (market_compound - 1) * 100
+
+        return float(week_return), float(market_return)
 
     def _calculate_ic_analysis(self, weekly_results: list[WeekResult]) -> IcAnalysis:
         """計算 IC 分析"""
