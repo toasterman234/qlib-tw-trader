@@ -203,6 +203,16 @@ df.sort_values(by=["score", "symbol"], ascending=[False, True]).head(top_k)
 
 需要重新訓練模型以驗證區分能力是否提升。
 
+## Scripts（分析與實驗腳本）
+
+`scripts/` 存放可重複執行的分析與實驗腳本（有別於 `sandbox/` 的臨時腳本）。
+
+| 腳本 | 用途 | 執行方式 |
+|------|------|---------|
+| `analyze_intraday_price.py` | 日內價格分析：各時段與收盤價偏差、最佳買賣時段 | `python scripts/analyze_intraday_price.py` |
+| `simulate_timing.py` | 交易時段成本比較：早賣午買 vs 開盤 vs 收盤 | `python scripts/simulate_timing.py` |
+| `experiment_ic_selection.py` | IC 增量選擇法 vs RD-Agent 的完整回測實驗 | `python scripts/experiment_ic_selection.py` |
+
 ## 資料來源
 
 | 優先序 | 來源 | 限制 |
