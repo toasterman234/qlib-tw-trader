@@ -13,9 +13,10 @@ from qlib.config import REG_CN
 from qlib.data import D
 from sqlalchemy.orm import Session
 
+from src.shared.constants import LABEL_DELAY_DAYS, LABEL_EXPR
+
 # 常數定義
 QLIB_DATA_DIR = Path("data/qlib")
-LABEL_EXPR = "Ref($close, -2) / Ref($close, -1) - 1"
 
 
 class IncrementalLearner:
@@ -211,16 +212,12 @@ class IncrementalLearner:
             (updated_model, days_updated) 或 None
         """
         # 計算更新資料範圍
-        # 注意：label 定義為 Ref($close, -2) / Ref($close, -1) - 1
-        # 所以最新可用的 label 是 target_date - 2 天
+        # label 為 2-day return，需要 T+3 收盤價
+        # 最新可用 label = target_date - LABEL_DELAY_DAYS
         from datetime import timedelta
 
-        # 更新資料從訓練結束後一天開始
         update_start = model_train_end + timedelta(days=1)
-
-        # 考慮 label 的延遲（需要 T+2 收盤價）
-        # 如果 target_date 是預測日，最新可用 label 是 target_date - 2
-        update_end = target_date - timedelta(days=2)
+        update_end = target_date - timedelta(days=LABEL_DELAY_DAYS)
 
         # 檢查是否有新資料可用
         if update_end <= update_start:

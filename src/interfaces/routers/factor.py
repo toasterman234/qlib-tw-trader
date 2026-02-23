@@ -22,6 +22,7 @@ from src.interfaces.schemas.factor import (
 from src.repositories.factor import FactorRepository, seed_factors
 from src.services.factor_validator import FactorValidator
 from src.services.job_manager import broadcast_data_updated
+from src.shared.constants import LABEL_EXPR
 
 router = APIRouter()
 
@@ -317,7 +318,7 @@ async def deduplicate_factors(
     # 計算 label（用於排序 IC）
     close = D.features(
         instruments=instruments,
-        fields=["Ref($close, -2) / Ref($close, -1) - 1"],
+        fields=[LABEL_EXPR],
         start_time=start_date,
         end_time=end_date,
     )

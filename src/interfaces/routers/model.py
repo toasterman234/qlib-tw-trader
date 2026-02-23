@@ -32,6 +32,7 @@ from src.interfaces.schemas.model import (
 from src.repositories.factor import FactorRepository
 from src.repositories.training import TrainingRepository
 from src.services.job_manager import broadcast_data_updated
+from src.shared.constants import LOOKBACK_DAYS
 from src.shared.week_utils import (
     compute_factor_pool_hash,
     get_trainable_weeks,
@@ -351,9 +352,7 @@ async def trigger_training(
             # Step 1: 導出 qlib 資料（含因子計算緩衝）
             await progress_callback(0, "Exporting qlib data...")
 
-            # 因子計算需要額外的歷史資料（約 60 個交易日）
-            lookback_days = 90
-            export_start = train_start - timedelta(days=lookback_days)
+            export_start = train_start - timedelta(days=LOOKBACK_DAYS)
             if export_start < db_start:
                 export_start = db_start
 
@@ -513,9 +512,7 @@ async def trigger_batch_training(
                 valid_start = week_slot.valid_start
                 valid_end = week_slot.valid_end
 
-                # 導出 qlib 資料
-                lookback_days = 90
-                export_start = train_start - timedelta(days=lookback_days)
+                export_start = train_start - timedelta(days=LOOKBACK_DAYS)
                 if export_start < db_start:
                     export_start = db_start
 

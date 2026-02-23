@@ -2,8 +2,8 @@
 預測服務 - 使用已訓練模型預測指定日期的股票
 
 重要：避免 Lookahead Bias
-- 模型訓練時，label = Ref($close, -2) / Ref($close, -1) - 1
-- 即：T 日特徵預測 T+1→T+2 收益率
+- 模型訓練時，label = Ref($close, -3) / Ref($close, -1) - 1
+- 即：T 日特徵預測 T+1→T+3 收益率（2-day return）
 - 若要在 T 日開盤交易，需使用 T-1 日特徵
 """
 

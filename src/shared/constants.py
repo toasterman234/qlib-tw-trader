@@ -1,4 +1,4 @@
-"""訓練相關常數"""
+"""訓練相關常數與 Label 定義"""
 
 from zoneinfo import ZoneInfo
 
@@ -31,3 +31,17 @@ IC_DEDUP_THRESHOLD = 0.99  # RD-Agent 使用 0.99
 QUALITY_JACCARD_MIN = 0.3  # Jaccard 相似度最低閾值
 QUALITY_IC_STD_MAX = 0.1   # IC 標準差最高閾值
 QUALITY_ICIR_MIN = 0.5     # ICIR 最低閾值
+
+# === Label 定義 ===
+# T 日特徵 → 預測 T+1→T+3 的 2-day return
+# Ref($close, -3) = close at T+3, Ref($close, -1) = close at T+1
+
+LABEL_EXPR = "Ref($close, -3) / Ref($close, -1) - 1"
+LABEL_DELAY_DAYS = 3     # incremental learner: 最新可用 label 需 T+3 收盤價
+LABEL_EXTEND_DAYS = 10   # 訓練時延伸 end_date 的日曆天數
+LABEL_ENTRY_OFFSET = 1   # 買入日偏移：T+1 → future_days[0]
+LABEL_EXIT_OFFSET = 3    # 賣出日偏移：T+3 → future_days[2]
+
+# === 因子計算回看期 ===
+
+LOOKBACK_DAYS = 400  # 250 日因子需 ~370 日曆天，取 400 確保充足

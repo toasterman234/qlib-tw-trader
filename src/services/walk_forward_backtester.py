@@ -18,6 +18,12 @@ from sqlalchemy.orm import Session
 
 from src.repositories.models import TrainingRun
 from src.repositories.training import TrainingRepository
+from src.shared.constants import (
+    LABEL_ENTRY_OFFSET,
+    LABEL_EXIT_OFFSET,
+    LABEL_EXTEND_DAYS,
+    LOOKBACK_DAYS,
+)
 from src.services.incremental_learner import IncrementalLearner
 from src.shared.week_utils import (
     compare_week_ids,
@@ -500,8 +506,8 @@ class WalkForwardBacktester:
         Live IC = corr(預測分數, 實際收益)
 
         重要：收益計算必須對齊 Label 定義！
-        - Label: Ref($close, -2) / Ref($close, -1) - 1 = T+1 收盤 → T+2 收盤
-        - T 日分數預測的是 T+1→T+2 的收益
+        - Label: Ref($close, -3) / Ref($close, -1) - 1 = T+1 收盤 → T+3 收盤 (2-day)
+        - T 日分數預測的是 T+1→T+3 的收益
 
         Args:
             predictions: DataFrame with index=date, columns=stock_id, values=score
@@ -515,8 +521,8 @@ class WalkForwardBacktester:
         if not instruments:
             return None
 
-        # 擴展查詢範圍：往後多取 7 天（確保能計算 T+1→T+2 收益）
-        extended_end = predict_end + timedelta(days=7)
+        # 擴展查詢範圍：往後多取天數（確保能計算 T+1→T+3 收益）
+        extended_end = predict_end + timedelta(days=LABEL_EXTEND_DAYS)
 
         # 使用快取的價格資料（如果有）
         if self._price_cache is not None and not self._price_cache.empty:
@@ -547,12 +553,10 @@ class WalkForwardBacktester:
         if price_df.empty:
             return None
 
-        # 計算 Label 對齊的收益：T+1 收盤 → T+2 收盤
-        # 對於 T 日，計算 close[T+2] / close[T+1] - 1
+        # 計算 Label 對齊的收益：T+1 收盤 → T+3 收盤 (2-day return)
         def calc_forward_returns(group: pd.DataFrame) -> pd.Series:
             close = group["close"]
-            # shift(-1) 是 T+1 的價格, shift(-2) 是 T+2 的價格
-            return close.shift(-2) / close.shift(-1) - 1
+            return close.shift(-LABEL_EXIT_OFFSET) / close.shift(-LABEL_ENTRY_OFFSET) - 1
 
         returns = price_df.groupby(level="instrument", group_keys=False).apply(calc_forward_returns)
         returns = returns.dropna()
@@ -644,8 +648,7 @@ class WalkForwardBacktester:
         last_predict = self._get_week_date_range(model_infos[-1].predict_week)[1]
 
         # 匯出 qlib 資料
-        lookback_days = 180
-        export_start = first_predict - timedelta(days=lookback_days)
+        export_start = first_predict - timedelta(days=LOOKBACK_DAYS)
 
         if on_progress:
             on_progress(8, f"Exporting qlib data: {export_start} ~ {last_predict}")
@@ -815,7 +818,7 @@ class WalkForwardBacktester:
         計算週收益（日度調倉，close-to-close）
 
         對每個預測日 T，用 prediction[T] 選 Top-K，
-        計算 close[T+2]/close[T+1]-1（對齊 label 定義）。
+        計算 close[T+3]/close[T+1]-1（對齊 2-day label 定義）。
         將所有日度收益複合為週收益。
 
         Args:
@@ -831,8 +834,8 @@ class WalkForwardBacktester:
         if not instruments:
             return None, None
 
-        # 擴展價格範圍：往後多取 7 天（涵蓋最後預測日的 T+2 交易日）
-        extended_end = predict_end + timedelta(days=7)
+        # 擴展價格範圍：往後多取天數（涵蓋最後預測日的 T+3 交易日）
+        extended_end = predict_end + timedelta(days=LABEL_EXTEND_DAYS)
 
         # 取得 close 價格
         if self._price_cache is not None and not self._price_cache.empty:
@@ -874,15 +877,15 @@ class WalkForwardBacktester:
         market_daily = []
 
         for pred_date in sorted(predictions.index):
-            # 找到 T+1 和 T+2 交易日
+            # 找到 T+1 和 T+3 交易日（對齊 2-day label）
             future_days = [d for d in trading_days if d > pred_date]
-            if len(future_days) < 2:
+            if len(future_days) < LABEL_EXIT_OFFSET:
                 continue
 
-            t1 = future_days[0]  # T+1: 買入日 close
-            t2 = future_days[1]  # T+2: 賣出日 close
+            t1 = future_days[LABEL_ENTRY_OFFSET - 1]  # T+1: 買入日 close
+            t2 = future_days[LABEL_EXIT_OFFSET - 1]    # T+3: 賣出日 close
 
-            # 計算所有股票的日度收益 close[T+2]/close[T+1]-1
+            # 計算所有股票的收益 close[T+3]/close[T+1]-1
             prices_t1 = close_wide.loc[t1].dropna()
             prices_t2 = close_wide.loc[t2].dropna()
             common = prices_t1.index.intersection(prices_t2.index)

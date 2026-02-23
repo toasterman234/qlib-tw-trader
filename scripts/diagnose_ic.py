@@ -38,7 +38,8 @@ def main():
     print(f"股票數: {len(instruments)}")
 
     # 載入驗證期資料
-    label_expr = "Ref($close, -2) / Ref($close, -1) - 1"
+    from src.shared.constants import LABEL_EXPR
+    label_expr = LABEL_EXPR
     all_fields = factor_exprs + [label_expr]
     all_names = factor_names + ["label"]
 

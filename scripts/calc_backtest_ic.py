@@ -72,8 +72,8 @@ def get_predictions_and_returns(model, factors, feature_date, instruments):
     predictions = model.predict(df.values)
     symbols = df.index.get_level_values('instrument').tolist()
 
-    # 獲取實際收益 (T+1 → T+2)
-    # label = Ref($close, -2) / Ref($close, -1) - 1
+    # 獲取實際收益 (T+1 → T+3)
+    # label = Ref($close, -3) / Ref($close, -1) - 1
     close_df = D.features(
         instruments=instruments,
         fields=['$close'],
@@ -87,13 +87,13 @@ def get_predictions_and_returns(model, factors, feature_date, instruments):
     close_df.columns = ['close']
     close_df = close_df.reset_index()
 
-    # 找前兩個交易日
+    # 找前三個交易日 (T+1, T+2, T+3)
     dates = close_df['datetime'].unique()
-    if len(dates) < 2:
+    if len(dates) < 3:
         return None
 
-    t1_date = dates[0]
-    t2_date = dates[1]
+    t1_date = dates[0]   # T+1
+    t2_date = dates[2]   # T+3
 
     t1_close = close_df[close_df['datetime'] == t1_date].set_index('instrument')['close']
     t2_close = close_df[close_df['datetime'] == t2_date].set_index('instrument')['close']

@@ -903,7 +903,7 @@ def main():
     print("\n[2/8] Exporting qlib data...")
     first_predict_start = get_week_date_range(model_infos[0].predict_week)[0]
     last_predict_end = get_week_date_range(model_infos[-1].predict_week)[1]
-    lookback_days = 180
+    lookback_days = 400
     export_start = first_predict_start - timedelta(days=lookback_days)
     export_end = last_predict_end
     export_qlib_data(export_start, export_end)

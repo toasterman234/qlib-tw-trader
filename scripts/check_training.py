@@ -28,7 +28,8 @@ def main():
     valid_start, valid_end = "2024-07-31", "2025-01-01"
 
     # 載入資料
-    label_expr = "Ref($close, -2) / Ref($close, -1) - 1"
+    from src.shared.constants import LABEL_EXPR
+    label_expr = LABEL_EXPR
     all_fields = factor_exprs + [label_expr]
     all_names = factor_names + ["label"]
 

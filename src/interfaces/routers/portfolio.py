@@ -20,6 +20,7 @@ from src.repositories.models import StockDaily, StockUniverse
 from src.repositories.training import TrainingRepository
 from src.services.predictor import Predictor
 from src.services.qlib_exporter import ExportConfig, QlibExporter
+from src.shared.constants import LOOKBACK_DAYS
 
 router = APIRouter()
 
@@ -56,10 +57,8 @@ async def generate_predictions(
         trade_date = latest_date_row[0] + timedelta(days=1)
 
     # 導出 qlib 資料（因子計算需要歷史資料）
-    # 導出到 trade_date 前一天（predictor 會使用這個日期的資料）
-    lookback_days = 180
     export_end = trade_date - timedelta(days=1)
-    export_start = export_end - timedelta(days=lookback_days)
+    export_start = export_end - timedelta(days=LOOKBACK_DAYS)
 
     def do_export():
         exporter = QlibExporter(session)

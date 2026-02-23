@@ -22,7 +22,7 @@ from src.repositories.factor import FactorRepository
 from src.repositories.models import Factor, TrainingRun
 from src.repositories.training import TrainingRepository
 from src.services.factor_selection import RobustFactorSelector
-from src.shared.constants import TRAIN_DAYS, VALID_DAYS
+from src.shared.constants import LABEL_EXPR, LABEL_EXTEND_DAYS, TRAIN_DAYS, VALID_DAYS
 
 TZ_TAIPEI = ZoneInfo("Asia/Taipei")
 
@@ -203,9 +203,9 @@ class ModelTrainer:
         """
         載入因子資料和標籤
 
-        注意：Label 定義為 Ref($close, -2) / Ref($close, -1) - 1
-        即 T 日的 label = close[T+2] / close[T+1] - 1
-        因此需要多取 5 天的資料以確保 end_date 日的 label 完整
+        注意：Label 定義為 Ref($close, -3) / Ref($close, -1) - 1
+        即 T 日的 label = close[T+3] / close[T+1] - 1（2-day return）
+        因此需要多取 LABEL_EXTEND_DAYS 天的資料以確保 end_date 日的 label 完整
 
         Returns:
             DataFrame with columns: [factor1, factor2, ..., label]
@@ -224,15 +224,13 @@ class ModelTrainer:
         fields = [f.expression for f in factors]
         names = [f.name for f in factors]
 
-        # 標籤：T+1→T+2 收益率
-        # Ref($close, -2) = close at T+2, Ref($close, -1) = close at T+1
-        label_expr = "Ref($close, -2) / Ref($close, -1) - 1"
+        # 標籤：T+1→T+3 的 2-day return
+        label_expr = LABEL_EXPR
         all_fields = fields + [label_expr]
         all_names = names + ["label"]
 
-        # 延伸 end_date 以確保 label 完整（需要 T+2 的價格）
-        # 多取 5 天以應對週末和假日
-        extended_end = end_date + timedelta(days=7)
+        # 延伸 end_date 以確保 label 完整（需要 T+3 的價格）
+        extended_end = end_date + timedelta(days=LABEL_EXTEND_DAYS)
 
         # 讀取資料
         df = D.features(
