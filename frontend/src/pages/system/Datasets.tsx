@@ -111,35 +111,24 @@ export function Datasets() {
 
   const loadData = useCallback(async () => {
     try {
-      const [
-        datasetsRes, categoriesRes, universeRes,
-        syncStatusRes, perStatusRes, instStatusRes, marginStatusRes, adjStatusRes,
-        shareholdingRes, securitiesLendingRes, monthlyRevenueRes
-      ] = await Promise.all([
+      const [datasetsRes, categoriesRes, universeRes, allSyncRes] = await Promise.all([
         datasetsApi.list(),
         datasetsApi.categories(),
         universeApi.get(),
-        syncApi.status('2020-01-01'),
-        syncApi.perStatus('2020-01-01'),
-        syncApi.institutionalStatus('2020-01-01'),
-        syncApi.marginStatus('2020-01-01'),
-        syncApi.adjStatus('2020-01-01'),
-        syncApi.shareholdingStatus('2020-01-01'),
-        syncApi.securitiesLendingStatus('2020-01-01'),
-        syncApi.monthlyRevenueStatus(2020),
+        syncApi.allStatus(),
       ])
       setDatasets(datasetsRes.datasets)
       setCategories(categoriesRes.categories)
       setUniverse(universeRes.stocks)
       setUniverseUpdatedAt(universeRes.updated_at)
-      setSyncStatus(syncStatusRes)
-      setPerSyncStatus(perStatusRes)
-      setInstSyncStatus(instStatusRes)
-      setMarginSyncStatus(marginStatusRes)
-      setAdjSyncStatus(adjStatusRes)
-      setShareholdingStatus(shareholdingRes)
-      setSecuritiesLendingStatus(securitiesLendingRes)
-      setMonthlyRevenueStatus(monthlyRevenueRes)
+      setSyncStatus(allSyncRes.stock_daily)
+      setPerSyncStatus(allSyncRes.per)
+      setInstSyncStatus(allSyncRes.institutional)
+      setMarginSyncStatus(allSyncRes.margin)
+      setAdjSyncStatus(allSyncRes.adj)
+      setShareholdingStatus(allSyncRes.shareholding)
+      setSecuritiesLendingStatus(allSyncRes.securities_lending)
+      setMonthlyRevenueStatus(allSyncRes.monthly_revenue)
     } catch (error) {
       console.error('Failed to load data:', error)
     } finally {
@@ -156,27 +145,15 @@ export function Datasets() {
 
   const refreshSyncStatus = async () => {
     try {
-      const [
-        syncStatusRes, perStatusRes, instStatusRes, marginStatusRes, adjStatusRes,
-        shareholdingRes, securitiesLendingRes, monthlyRevenueRes
-      ] = await Promise.all([
-        syncApi.status('2020-01-01'),
-        syncApi.perStatus('2020-01-01'),
-        syncApi.institutionalStatus('2020-01-01'),
-        syncApi.marginStatus('2020-01-01'),
-        syncApi.adjStatus('2020-01-01'),
-        syncApi.shareholdingStatus('2020-01-01'),
-        syncApi.securitiesLendingStatus('2020-01-01'),
-        syncApi.monthlyRevenueStatus(2020),
-      ])
-      setSyncStatus(syncStatusRes)
-      setPerSyncStatus(perStatusRes)
-      setInstSyncStatus(instStatusRes)
-      setMarginSyncStatus(marginStatusRes)
-      setAdjSyncStatus(adjStatusRes)
-      setShareholdingStatus(shareholdingRes)
-      setSecuritiesLendingStatus(securitiesLendingRes)
-      setMonthlyRevenueStatus(monthlyRevenueRes)
+      const allSyncRes = await syncApi.allStatus()
+      setSyncStatus(allSyncRes.stock_daily)
+      setPerSyncStatus(allSyncRes.per)
+      setInstSyncStatus(allSyncRes.institutional)
+      setMarginSyncStatus(allSyncRes.margin)
+      setAdjSyncStatus(allSyncRes.adj)
+      setShareholdingStatus(allSyncRes.shareholding)
+      setSecuritiesLendingStatus(allSyncRes.securities_lending)
+      setMonthlyRevenueStatus(allSyncRes.monthly_revenue)
     } catch (error) {
       console.error('Failed to refresh sync status:', error)
     }

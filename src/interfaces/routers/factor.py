@@ -52,11 +52,10 @@ async def list_factors(
     """取得因子清單"""
     repo = FactorRepository(session)
     factors = repo.get_all(category=category, enabled=enabled)
+    all_stats = repo.get_all_selection_stats()
 
-    items = []
-    for factor in factors:
-        stats = repo.get_selection_stats(factor.id)
-        items.append(_factor_to_response(factor, stats))
+    empty_stats = {"times_evaluated": 0, "times_selected": 0, "selection_rate": 0.0}
+    items = [_factor_to_response(f, all_stats.get(f.id, empty_stats)) for f in factors]
 
     return FactorListResponse(items=items, total=len(items))
 

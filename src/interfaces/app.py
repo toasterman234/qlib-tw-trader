@@ -2,15 +2,36 @@
 FastAPI 應用程式
 """
 
+import logging
+import time
+
 from dotenv import load_dotenv
 load_dotenv()  # 載入 .env 檔案
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
 
 from src.interfaces.exceptions import register_exception_handlers
 from src.interfaces.routers import backtest, dashboard, datasets, factor, model, portfolio, qlib, sync, system, universe, websocket
 from src.repositories.database import init_db
+
+perf_logger = logging.getLogger("perf")
+
+
+class TimingMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        start = time.perf_counter()
+        response = await call_next(request)
+        elapsed_ms = (time.perf_counter() - start) * 1000
+        path = request.url.path
+        if path.startswith("/api/"):
+            if elapsed_ms > 100:
+                perf_logger.warning(f"SLOW {request.method} {path} {elapsed_ms:.0f}ms")
+            else:
+                perf_logger.info(f"{request.method} {path} {elapsed_ms:.0f}ms")
+        return response
 
 
 def create_app() -> FastAPI:
@@ -34,6 +55,9 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    # 效能計時
+    app.add_middleware(TimingMiddleware)
 
     # 註冊路由
     app.include_router(sync.router, prefix="/api/v1/sync", tags=["sync"])

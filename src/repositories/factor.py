@@ -1,4 +1,4 @@
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.orm import Session
 
 from src.repositories.factors import ALL_FACTORS
@@ -185,6 +185,29 @@ class FactorRepository:
             "times_selected": times_selected,
             "selection_rate": selection_rate,
         }
+
+    def get_all_selection_stats(self) -> dict[int, dict]:
+        """批次取得所有因子的入選統計（單一 GROUP BY 查詢）"""
+        stmt = (
+            select(
+                TrainingFactorResult.factor_id,
+                func.count().label("times_evaluated"),
+                func.count(case((TrainingFactorResult.selected == True, 1))).label("times_selected"),
+            )
+            .group_by(TrainingFactorResult.factor_id)
+        )
+        results = self._session.execute(stmt).all()
+
+        stats = {}
+        for row in results:
+            evaluated = row.times_evaluated
+            selected = row.times_selected
+            stats[row.factor_id] = {
+                "times_evaluated": evaluated,
+                "times_selected": selected,
+                "selection_rate": selected / evaluated if evaluated > 0 else 0.0,
+            }
+        return stats
 
     def get_selection_history(self, factor_id: int) -> list[dict]:
         """取得因子入選歷史"""

@@ -7,7 +7,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 import httpx
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 import yfinance as yf
@@ -177,13 +177,133 @@ class SyncService:
 
     def count_trading_days(self, start_date: date, end_date: date) -> int:
         """計算指定區間的交易日數"""
-        from sqlalchemy import func
         stmt = select(func.count()).select_from(TradingCalendar).where(
             TradingCalendar.date >= start_date,
             TradingCalendar.date <= end_date,
             TradingCalendar.is_trading_day == True,
         )
         return self._session.execute(stmt).scalar() or 0
+
+    def _get_daily_status(self, model_cls, start_date: date, end_date: date) -> dict:
+        """通用日頻資料狀態查詢（單一 GROUP BY 取代 per-stock 迴圈）"""
+        trading_days = self.count_trading_days(start_date, end_date)
+        all_trading_dates = self.get_trading_dates(start_date, end_date)
+
+        universe = self._session.execute(
+            select(StockUniverse).order_by(StockUniverse.rank)
+        ).scalars().all()
+
+        # 批次查詢：一次取得所有股票的 min/max/count
+        stats_stmt = (
+            select(
+                model_cls.stock_id,
+                func.min(model_cls.date).label("earliest"),
+                func.max(model_cls.date).label("latest"),
+                func.count().label("total"),
+            )
+            .where(model_cls.date >= start_date, model_cls.date <= end_date)
+            .group_by(model_cls.stock_id)
+        )
+        stats_map = {
+            r.stock_id: (r.earliest, r.latest, r.total)
+            for r in self._session.execute(stats_stmt).all()
+        }
+
+        stocks = []
+        for stock in universe:
+            earliest, latest, total = stats_map.get(stock.stock_id, (None, None, 0))
+            if earliest:
+                expected_days = sum(1 for d in all_trading_dates if d >= earliest)
+                missing = max(0, expected_days - total)
+                coverage = self._calc_coverage(total, expected_days, self.MIN_DAILY_RECORDS)
+            else:
+                missing = 0
+                coverage = 0
+
+            stocks.append({
+                "stock_id": stock.stock_id,
+                "name": stock.name,
+                "rank": stock.rank,
+                "earliest_date": earliest.isoformat() if earliest else None,
+                "latest_date": latest.isoformat() if latest else None,
+                "total_records": total,
+                "missing_count": missing,
+                "coverage_pct": round(coverage, 1),
+            })
+
+        return {
+            "trading_days": trading_days,
+            "start_date": start_date.isoformat(),
+            "end_date": end_date.isoformat(),
+            "stocks": stocks,
+        }
+
+    def get_all_daily_status(self, start_date: date, end_date: date) -> dict:
+        """一次查詢所有日頻表的狀態（共享 universe 和 trading_dates）"""
+        trading_days = self.count_trading_days(start_date, end_date)
+        all_trading_dates = self.get_trading_dates(start_date, end_date)
+
+        universe = self._session.execute(
+            select(StockUniverse).order_by(StockUniverse.rank)
+        ).scalars().all()
+
+        tables = {
+            "stock_daily": StockDaily,
+            "per": StockDailyPER,
+            "institutional": StockDailyInstitutional,
+            "margin": StockDailyMargin,
+            "adj": StockDailyAdj,
+            "shareholding": StockDailyShareholding,
+            "securities_lending": StockDailySecuritiesLending,
+        }
+
+        result = {}
+        for key, model_cls in tables.items():
+            stats_stmt = (
+                select(
+                    model_cls.stock_id,
+                    func.min(model_cls.date).label("earliest"),
+                    func.max(model_cls.date).label("latest"),
+                    func.count().label("total"),
+                )
+                .where(model_cls.date >= start_date, model_cls.date <= end_date)
+                .group_by(model_cls.stock_id)
+            )
+            stats_map = {
+                r.stock_id: (r.earliest, r.latest, r.total)
+                for r in self._session.execute(stats_stmt).all()
+            }
+
+            stocks = []
+            for stock in universe:
+                earliest, latest, total = stats_map.get(stock.stock_id, (None, None, 0))
+                if earliest:
+                    expected_days = sum(1 for d in all_trading_dates if d >= earliest)
+                    missing = max(0, expected_days - total)
+                    coverage = self._calc_coverage(total, expected_days, self.MIN_DAILY_RECORDS)
+                else:
+                    missing = 0
+                    coverage = 0
+
+                stocks.append({
+                    "stock_id": stock.stock_id,
+                    "name": stock.name,
+                    "rank": stock.rank,
+                    "earliest_date": earliest.isoformat() if earliest else None,
+                    "latest_date": latest.isoformat() if latest else None,
+                    "total_records": total,
+                    "missing_count": missing,
+                    "coverage_pct": round(coverage, 1),
+                })
+
+            result[key] = {
+                "trading_days": trading_days,
+                "start_date": start_date.isoformat(),
+                "end_date": end_date.isoformat(),
+                "stocks": stocks,
+            }
+
+        return result
 
     # =========================================================================
     # 股票日K線
@@ -552,56 +672,7 @@ class SyncService:
 
     def get_per_status(self, start_date: date, end_date: date) -> dict:
         """取得 PER 資料狀態"""
-        from sqlalchemy import func
-
-        # 取得整體交易日數（用於顯示）
-        trading_days = self.count_trading_days(start_date, end_date)
-
-        # 取得股票池
-        stmt = select(StockUniverse).order_by(StockUniverse.rank)
-        universe = self._session.execute(stmt).scalars().all()
-
-        stocks = []
-        for stock in universe:
-            # 統計該股票的資料
-            stmt = select(
-                func.min(StockDailyPER.date),
-                func.max(StockDailyPER.date),
-                func.count(),
-            ).where(
-                StockDailyPER.stock_id == stock.stock_id,
-                StockDailyPER.date >= start_date,
-                StockDailyPER.date <= end_date,
-            )
-            result = self._session.execute(stmt).fetchone()
-            earliest, latest, total = result
-
-            # 用該股票的首筆資料日期計算覆蓋率（考慮最低筆數門檻）
-            if earliest:
-                expected_days = self.count_trading_days(earliest, end_date)
-                missing = max(0, expected_days - total)
-                coverage = self._calc_coverage(total, expected_days, self.MIN_DAILY_RECORDS)
-            else:
-                missing = 0
-                coverage = 0
-
-            stocks.append({
-                "stock_id": stock.stock_id,
-                "name": stock.name,
-                "rank": stock.rank,
-                "earliest_date": earliest.isoformat() if earliest else None,
-                "latest_date": latest.isoformat() if latest else None,
-                "total_records": total,
-                "missing_count": missing,
-                "coverage_pct": round(coverage, 1),
-            })
-
-        return {
-            "trading_days": trading_days,
-            "start_date": start_date.isoformat(),
-            "end_date": end_date.isoformat(),
-            "stocks": stocks,
-        }
+        return self._get_daily_status(StockDailyPER, start_date, end_date)
 
     # =========================================================================
     # 三大法人買賣超
@@ -783,56 +854,7 @@ class SyncService:
 
     def get_institutional_status(self, start_date: date, end_date: date) -> dict:
         """取得三大法人資料狀態"""
-        from sqlalchemy import func
-
-        # 取得整體交易日數（用於顯示）
-        trading_days = self.count_trading_days(start_date, end_date)
-
-        # 取得股票池
-        stmt = select(StockUniverse).order_by(StockUniverse.rank)
-        universe = self._session.execute(stmt).scalars().all()
-
-        stocks = []
-        for stock in universe:
-            # 統計該股票的資料
-            stmt = select(
-                func.min(StockDailyInstitutional.date),
-                func.max(StockDailyInstitutional.date),
-                func.count(),
-            ).where(
-                StockDailyInstitutional.stock_id == stock.stock_id,
-                StockDailyInstitutional.date >= start_date,
-                StockDailyInstitutional.date <= end_date,
-            )
-            result = self._session.execute(stmt).fetchone()
-            earliest, latest, total = result
-
-            # 用該股票的首筆資料日期計算覆蓋率（考慮最低筆數門檻）
-            if earliest:
-                expected_days = self.count_trading_days(earliest, end_date)
-                missing = max(0, expected_days - total)
-                coverage = self._calc_coverage(total, expected_days, self.MIN_DAILY_RECORDS)
-            else:
-                missing = 0
-                coverage = 0
-
-            stocks.append({
-                "stock_id": stock.stock_id,
-                "name": stock.name,
-                "rank": stock.rank,
-                "earliest_date": earliest.isoformat() if earliest else None,
-                "latest_date": latest.isoformat() if latest else None,
-                "total_records": total,
-                "missing_count": missing,
-                "coverage_pct": round(coverage, 1),
-            })
-
-        return {
-            "trading_days": trading_days,
-            "start_date": start_date.isoformat(),
-            "end_date": end_date.isoformat(),
-            "stocks": stocks,
-        }
+        return self._get_daily_status(StockDailyInstitutional, start_date, end_date)
 
     # =========================================================================
     # 融資融券
@@ -1002,56 +1024,7 @@ class SyncService:
 
     def get_margin_status(self, start_date: date, end_date: date) -> dict:
         """取得融資融券資料狀態"""
-        from sqlalchemy import func
-
-        # 取得整體交易日數（用於顯示）
-        trading_days = self.count_trading_days(start_date, end_date)
-
-        # 取得股票池
-        stmt = select(StockUniverse).order_by(StockUniverse.rank)
-        universe = self._session.execute(stmt).scalars().all()
-
-        stocks = []
-        for stock in universe:
-            # 統計該股票的資料
-            stmt = select(
-                func.min(StockDailyMargin.date),
-                func.max(StockDailyMargin.date),
-                func.count(),
-            ).where(
-                StockDailyMargin.stock_id == stock.stock_id,
-                StockDailyMargin.date >= start_date,
-                StockDailyMargin.date <= end_date,
-            )
-            result = self._session.execute(stmt).fetchone()
-            earliest, latest, total = result
-
-            # 用該股票的首筆資料日期計算覆蓋率（考慮最低筆數門檻）
-            if earliest:
-                expected_days = self.count_trading_days(earliest, end_date)
-                missing = max(0, expected_days - total)
-                coverage = self._calc_coverage(total, expected_days, self.MIN_DAILY_RECORDS)
-            else:
-                missing = 0
-                coverage = 0
-
-            stocks.append({
-                "stock_id": stock.stock_id,
-                "name": stock.name,
-                "rank": stock.rank,
-                "earliest_date": earliest.isoformat() if earliest else None,
-                "latest_date": latest.isoformat() if latest else None,
-                "total_records": total,
-                "missing_count": missing,
-                "coverage_pct": round(coverage, 1),
-            })
-
-        return {
-            "trading_days": trading_days,
-            "start_date": start_date.isoformat(),
-            "end_date": end_date.isoformat(),
-            "stocks": stocks,
-        }
+        return self._get_daily_status(StockDailyMargin, start_date, end_date)
 
     # =========================================================================
     # 還原股價 (yfinance)
@@ -1212,56 +1185,7 @@ class SyncService:
 
     def get_adj_status(self, start_date: date, end_date: date) -> dict:
         """取得還原股價資料狀態"""
-        from sqlalchemy import func
-
-        # 取得整體交易日數（用於顯示）
-        trading_days = self.count_trading_days(start_date, end_date)
-
-        # 取得股票池
-        stmt = select(StockUniverse).order_by(StockUniverse.rank)
-        universe = self._session.execute(stmt).scalars().all()
-
-        stocks = []
-        for stock in universe:
-            # 統計該股票的資料
-            stmt = select(
-                func.min(StockDailyAdj.date),
-                func.max(StockDailyAdj.date),
-                func.count(),
-            ).where(
-                StockDailyAdj.stock_id == stock.stock_id,
-                StockDailyAdj.date >= start_date,
-                StockDailyAdj.date <= end_date,
-            )
-            result = self._session.execute(stmt).fetchone()
-            earliest, latest, total = result
-
-            # 用該股票的首筆資料日期計算覆蓋率（考慮最低筆數門檻）
-            if earliest:
-                expected_days = self.count_trading_days(earliest, end_date)
-                missing = max(0, expected_days - total)
-                coverage = self._calc_coverage(total, expected_days, self.MIN_DAILY_RECORDS)
-            else:
-                missing = 0
-                coverage = 0
-
-            stocks.append({
-                "stock_id": stock.stock_id,
-                "name": stock.name,
-                "rank": stock.rank,
-                "earliest_date": earliest.isoformat() if earliest else None,
-                "latest_date": latest.isoformat() if latest else None,
-                "total_records": total,
-                "missing_count": missing,
-                "coverage_pct": round(coverage, 1),
-            })
-
-        return {
-            "trading_days": trading_days,
-            "start_date": start_date.isoformat(),
-            "end_date": end_date.isoformat(),
-            "stocks": stocks,
-        }
+        return self._get_daily_status(StockDailyAdj, start_date, end_date)
 
     # =========================================================================
     # 外資持股
@@ -1416,56 +1340,7 @@ class SyncService:
 
     def get_shareholding_status(self, start_date: date, end_date: date) -> dict:
         """取得外資持股資料狀態"""
-        from sqlalchemy import func
-
-        # 取得整體交易日數（用於顯示）
-        trading_days = self.count_trading_days(start_date, end_date)
-
-        # 取得股票池
-        stmt = select(StockUniverse).order_by(StockUniverse.rank)
-        universe = self._session.execute(stmt).scalars().all()
-
-        stocks = []
-        for stock in universe:
-            # 統計該股票的資料
-            stmt = select(
-                func.min(StockDailyShareholding.date),
-                func.max(StockDailyShareholding.date),
-                func.count(),
-            ).where(
-                StockDailyShareholding.stock_id == stock.stock_id,
-                StockDailyShareholding.date >= start_date,
-                StockDailyShareholding.date <= end_date,
-            )
-            result = self._session.execute(stmt).fetchone()
-            earliest, latest, total = result
-
-            # 用該股票的首筆資料日期計算覆蓋率（考慮最低筆數門檻）
-            if earliest:
-                expected_days = self.count_trading_days(earliest, end_date)
-                missing = max(0, expected_days - total)
-                coverage = self._calc_coverage(total, expected_days, self.MIN_DAILY_RECORDS)
-            else:
-                missing = 0
-                coverage = 0
-
-            stocks.append({
-                "stock_id": stock.stock_id,
-                "name": stock.name,
-                "rank": stock.rank,
-                "earliest_date": earliest.isoformat() if earliest else None,
-                "latest_date": latest.isoformat() if latest else None,
-                "total_records": total,
-                "missing_count": missing,
-                "coverage_pct": round(coverage, 1),
-            })
-
-        return {
-            "trading_days": trading_days,
-            "start_date": start_date.isoformat(),
-            "end_date": end_date.isoformat(),
-            "stocks": stocks,
-        }
+        return self._get_daily_status(StockDailyShareholding, start_date, end_date)
 
     # =========================================================================
     # 借券明細
@@ -1544,56 +1419,7 @@ class SyncService:
 
     def get_securities_lending_status(self, start_date: date, end_date: date) -> dict:
         """取得借券明細資料狀態"""
-        from sqlalchemy import func
-
-        # 取得整體交易日數（用於顯示）
-        trading_days = self.count_trading_days(start_date, end_date)
-
-        # 取得股票池
-        stmt = select(StockUniverse).order_by(StockUniverse.rank)
-        universe = self._session.execute(stmt).scalars().all()
-
-        stocks = []
-        for stock in universe:
-            # 統計該股票的資料
-            stmt = select(
-                func.min(StockDailySecuritiesLending.date),
-                func.max(StockDailySecuritiesLending.date),
-                func.count(),
-            ).where(
-                StockDailySecuritiesLending.stock_id == stock.stock_id,
-                StockDailySecuritiesLending.date >= start_date,
-                StockDailySecuritiesLending.date <= end_date,
-            )
-            result = self._session.execute(stmt).fetchone()
-            earliest, latest, total = result
-
-            # 用該股票的首筆資料日期計算覆蓋率（考慮最低筆數門檻）
-            if earliest:
-                expected_days = self.count_trading_days(earliest, end_date)
-                missing = max(0, expected_days - total)
-                coverage = self._calc_coverage(total, expected_days, self.MIN_DAILY_RECORDS)
-            else:
-                missing = 0
-                coverage = 0
-
-            stocks.append({
-                "stock_id": stock.stock_id,
-                "name": stock.name,
-                "rank": stock.rank,
-                "earliest_date": earliest.isoformat() if earliest else None,
-                "latest_date": latest.isoformat() if latest else None,
-                "total_records": total,
-                "missing_count": missing,
-                "coverage_pct": round(coverage, 1),
-            })
-
-        return {
-            "trading_days": trading_days,
-            "start_date": start_date.isoformat(),
-            "end_date": end_date.isoformat(),
-            "stocks": stocks,
-        }
+        return self._get_daily_status(StockDailySecuritiesLending, start_date, end_date)
 
     # =========================================================================
     # 月營收（低頻）
@@ -1708,42 +1534,42 @@ class SyncService:
 
     def get_monthly_revenue_status(self, start_year: int, end_year: int) -> dict:
         """取得月營收資料狀態"""
-        from sqlalchemy import func
-
-        # 計算應有的月份數
         expected_months = self._get_expected_months(start_year, 1, end_year, 12)
 
-        # 取得股票池
-        stmt = select(StockUniverse).order_by(StockUniverse.rank)
-        universe = self._session.execute(stmt).scalars().all()
+        universe = self._session.execute(
+            select(StockUniverse).order_by(StockUniverse.rank)
+        ).scalars().all()
+
+        # 批次查詢
+        start_val = start_year * 100 + 1
+        end_val = end_year * 100 + 12
+        ym_expr = StockMonthlyRevenue.year * 100 + StockMonthlyRevenue.month
+        stats_stmt = (
+            select(
+                StockMonthlyRevenue.stock_id,
+                func.min(ym_expr).label("earliest_val"),
+                func.max(ym_expr).label("latest_val"),
+                func.count().label("total"),
+            )
+            .where(ym_expr >= start_val, ym_expr <= end_val)
+            .group_by(StockMonthlyRevenue.stock_id)
+        )
+        stats_map = {
+            r.stock_id: (r.earliest_val, r.latest_val, r.total)
+            for r in self._session.execute(stats_stmt).all()
+        }
 
         stocks = []
         for stock in universe:
-            # 統計該股票的資料
-            start_val = start_year * 100 + 1
-            end_val = end_year * 100 + 12
-            stmt = select(
-                func.min(StockMonthlyRevenue.year * 100 + StockMonthlyRevenue.month),
-                func.max(StockMonthlyRevenue.year * 100 + StockMonthlyRevenue.month),
-                func.count(),
-            ).where(
-                StockMonthlyRevenue.stock_id == stock.stock_id,
-                (StockMonthlyRevenue.year * 100 + StockMonthlyRevenue.month) >= start_val,
-                (StockMonthlyRevenue.year * 100 + StockMonthlyRevenue.month) <= end_val,
-            )
-            result = self._session.execute(stmt).fetchone()
-            earliest_val, latest_val, total = result
+            earliest_val, latest_val, total = stats_map.get(stock.stock_id, (None, None, 0))
 
             if earliest_val:
-                earliest_year = earliest_val // 100
-                earliest_month = earliest_val % 100
-                latest_year = latest_val // 100
-                latest_month = latest_val % 100
-                earliest_str = f"{earliest_year}-{earliest_month:02d}"
-                latest_str = f"{latest_year}-{latest_month:02d}"
+                e_year, e_month = earliest_val // 100, earliest_val % 100
+                l_year, l_month = latest_val // 100, latest_val % 100
+                earliest_str = f"{e_year}-{e_month:02d}"
+                latest_str = f"{l_year}-{l_month:02d}"
 
-                # 從首筆資料起算的期望月份數（考慮最低筆數門檻）
-                months_from_start = self._get_expected_months(earliest_year, earliest_month, end_year, 12)
+                months_from_start = self._get_expected_months(e_year, e_month, end_year, 12)
                 expected = len(months_from_start)
                 missing = max(0, expected - total)
                 coverage = self._calc_coverage(total, expected, self.MIN_MONTHLY_RECORDS)

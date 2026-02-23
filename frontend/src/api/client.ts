@@ -592,7 +592,19 @@ export interface MonthlyStockResponse {
   missing_months: string[]
 }
 
+export interface AllSyncStatusResponse {
+  stock_daily: SyncStatusResponse
+  per: SyncStatusResponse
+  institutional: SyncStatusResponse
+  margin: SyncStatusResponse
+  adj: SyncStatusResponse
+  shareholding: SyncStatusResponse
+  securities_lending: SyncStatusResponse
+  monthly_revenue: MonthlyStatusResponse
+}
+
 export const syncApi = {
+  allStatus: () => api.get<AllSyncStatusResponse>('/sync/all-status'),
   status: (startDate?: string, endDate?: string) => {
     const params = new URLSearchParams()
     if (startDate) params.set('start_date', startDate)

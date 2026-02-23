@@ -216,57 +216,35 @@ async def get_data_status(
         end_date = date.today()
 
     service = SyncService(session)
-
-    # 取得整體交易日數（用於顯示）
-    trading_days = service.count_trading_days(start_date, end_date)
-
-    # 取得股票池
-    stmt = select(StockUniverse).order_by(StockUniverse.rank)
-    universe = session.execute(stmt).scalars().all()
-
-    stocks = []
-    for stock in universe:
-        # 統計該股票的資料
-        stmt = select(
-            func.min(StockDaily.date),
-            func.max(StockDaily.date),
-            func.count(),
-        ).where(
-            StockDaily.stock_id == stock.stock_id,
-            StockDaily.date >= start_date,
-            StockDaily.date <= end_date,
-        )
-        result = session.execute(stmt).fetchone()
-        earliest, latest, total = result
-
-        # 用該股票的首筆資料日期計算覆蓋率（考慮最低筆數門檻）
-        if earliest:
-            expected_days = service.count_trading_days(earliest, end_date)
-            missing = max(0, expected_days - total)
-            coverage = SyncService._calc_coverage(total, expected_days, SyncService.MIN_DAILY_RECORDS)
-        else:
-            missing = 0
-            coverage = 0
-
-        stocks.append(
-            DataStatusItem(
-                stock_id=stock.stock_id,
-                name=stock.name,
-                rank=stock.rank,
-                earliest_date=earliest.isoformat() if earliest else None,
-                latest_date=latest.isoformat() if latest else None,
-                total_records=total,
-                missing_count=missing,
-                coverage_pct=round(coverage, 1),
-            )
-        )
+    result = service._get_daily_status(StockDaily, start_date, end_date)
 
     return DataStatusResponse(
-        trading_days=trading_days,
-        start_date=start_date.isoformat(),
-        end_date=end_date.isoformat(),
-        stocks=stocks,
+        trading_days=result["trading_days"],
+        start_date=result["start_date"],
+        end_date=result["end_date"],
+        stocks=[DataStatusItem(**s) for s in result["stocks"]],
     )
+
+
+@router.get("/all-status")
+async def get_all_sync_status(
+    start_date: date = Query(default=date(2020, 1, 1)),
+    end_date: date = Query(default=None),
+    start_year: int = Query(default=2020),
+    end_year: int = Query(default=None),
+    session: Session = Depends(get_db),
+):
+    """一次取得所有資料表的同步狀態"""
+    if end_date is None:
+        end_date = date.today()
+    if end_year is None:
+        end_year = date.today().year
+
+    service = SyncService(session)
+    daily = service.get_all_daily_status(start_date, end_date)
+    monthly = service.get_monthly_revenue_status(start_year, end_year)
+
+    return {**daily, "monthly_revenue": monthly}
 
 
 # =========================================================================

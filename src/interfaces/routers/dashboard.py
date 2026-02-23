@@ -35,10 +35,11 @@ async def get_dashboard_summary(
     # 因子摘要
     all_factors = factor_repo.get_all()
     enabled_factors = [f for f in all_factors if f.enabled]
+    all_stats = factor_repo.get_all_selection_stats()
     low_selection_count = 0
     for f in enabled_factors:
-        stats = factor_repo.get_selection_stats(f.id)
-        if stats["selection_rate"] < LOW_SELECTION_THRESHOLD and stats["times_evaluated"] > 0:
+        stats = all_stats.get(f.id, {})
+        if stats.get("selection_rate", 0) < LOW_SELECTION_THRESHOLD and stats.get("times_evaluated", 0) > 0:
             low_selection_count += 1
 
     # 模型摘要
