@@ -305,6 +305,11 @@ class ModelTrainer:
 
         return series.groupby(level="datetime", group_keys=False).apply(rank_pct)
 
+    # DoubleEnsemble 固定參數（論文 + Qlib benchmark 一致，不需搜索）
+    DE_NUM_MODELS = 3  # CSI300 benchmark 用 3（小股票池）
+    DE_DECAY = 0.5  # 所有 Qlib benchmark 一致
+    DE_EPOCHS = 50  # 搭配 early stopping
+
     def _optimize_hyperparameters(
         self,
         X_train: pd.DataFrame,
@@ -316,10 +321,10 @@ class ModelTrainer:
         on_progress: Callable[[float, str], None] | None = None,
     ) -> dict:
         """
-        使用 Optuna 優化 DoubleEnsemble 超參數
+        使用 Optuna 優化 LightGBM 子模型超參數
 
-        搜索 LightGBM 子模型參數 + DoubleEnsemble 特有參數（num_models, decay）。
-        每個 trial 訓練完整 DoubleEnsemble（較慢），因此 n_trials 預設較低。
+        DoubleEnsemble 特有參數（num_models, decay 等）根據論文固定，
+        只搜索 LightGBM 底層參數。
         """
         import optuna
 
@@ -330,21 +335,19 @@ class ModelTrainer:
         n_trials = n_trials or self.OPTUNA_N_TRIALS
         timeout = timeout or self.OPTUNA_TIMEOUT
 
-        # 預處理資料（只做一次）
         X_train_processed = self._process_inf(X_train)
         X_valid_processed = self._process_inf(X_valid)
         X_train_norm = self._zscore_by_date(X_train_processed).fillna(0)
         X_valid_norm = self._zscore_by_date(X_valid_processed).fillna(0)
 
+        n_samples = len(X_train)
+        scale_factor = max(0.1, min(1.0, n_samples / 100000))
+        lambda_max = max(1.0, 50.0 * scale_factor)
+
         best_ic = [0.0]
         trial_count = [0]
 
         def objective(trial: optuna.Trial) -> float:
-            # DoubleEnsemble 特有參數
-            num_models = trial.suggest_int("num_models", 3, 8)
-            decay = trial.suggest_float("decay", 0.3, 0.9)
-
-            # LightGBM 子模型參數
             lgb_params = {
                 "objective": "regression",
                 "metric": "mse",
@@ -354,19 +357,19 @@ class ModelTrainer:
                 "feature_pre_filter": False,
                 "device": "gpu",
                 "gpu_use_dp": False,
-                "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.1, log=True),
-                "num_leaves": trial.suggest_int("num_leaves", 16, 48),
-                "max_depth": trial.suggest_int("max_depth", 3, 6),
-                "lambda_l1": trial.suggest_float("lambda_l1", 0.01, 20.0, log=True),
-                "lambda_l2": trial.suggest_float("lambda_l2", 0.01, 20.0, log=True),
-                "bagging_fraction": trial.suggest_float("bagging_fraction", 0.6, 1.0),
+                "learning_rate": trial.suggest_float("learning_rate", 0.02, 0.2, log=True),
+                "num_leaves": trial.suggest_int("num_leaves", 16, 64),
+                "max_depth": trial.suggest_int("max_depth", 4, 8),
+                "lambda_l1": trial.suggest_float("lambda_l1", 0.01, lambda_max, log=True),
+                "lambda_l2": trial.suggest_float("lambda_l2", 0.01, lambda_max, log=True),
+                "bagging_fraction": trial.suggest_float("bagging_fraction", 0.7, 1.0),
                 "bagging_freq": 5,
             }
 
             model = DoubleEnsembleModel(
-                num_models=num_models,
-                epochs=50,  # 快速搜索用較少 epochs
-                decay=decay,
+                num_models=self.DE_NUM_MODELS,
+                epochs=self.DE_EPOCHS,
+                decay=self.DE_DECAY,
                 early_stopping_rounds=10,
                 **lgb_params,
             )
@@ -410,11 +413,8 @@ class ModelTrainer:
         study = optuna.create_study(direction="maximize")
         study.optimize(objective, n_trials=n_trials, timeout=timeout, show_progress_bar=False)
 
-        # 分離 DoubleEnsemble 參數和 LightGBM 參數
         best = study.best_params
-        result = {
-            "num_models": best.pop("num_models", 6),
-            "decay": best.pop("decay", 0.5),
+        return {
             "lgb_params": {
                 "objective": "regression",
                 "metric": "mse",
@@ -424,11 +424,10 @@ class ModelTrainer:
                 "feature_pre_filter": False,
                 "device": "gpu",
                 "gpu_use_dp": False,
+                "bagging_freq": 5,
                 **best,
             },
         }
-
-        return result
 
     def _train_model(
         self,
@@ -460,14 +459,12 @@ class ModelTrainer:
             params = self._optimized_params or {}
 
         lgb_params = params.get("lgb_params", DEFAULT_LGB_PARAMS)
-        num_models = params.get("num_models", 6)
-        decay = params.get("decay", 0.5)
 
         model = DoubleEnsembleModel(
-            num_models=num_models,
-            epochs=100,
-            decay=decay,
-            early_stopping_rounds=20,
+            num_models=self.DE_NUM_MODELS,
+            epochs=self.DE_EPOCHS,
+            decay=self.DE_DECAY,
+            early_stopping_rounds=10,
             **lgb_params,
         )
         model.fit(
@@ -965,10 +962,11 @@ class ModelTrainer:
                     on_progress=optuna_progress,
                 )
                 self._optimized_params = optimized_params
-                logger.info(f"Optuna found best params: num_models={optimized_params.get('num_models')}, decay={optimized_params.get('decay')}")
+                lgb_best = optimized_params.get("lgb_params", {})
+                logger.info(f"Optuna found best LGB params: lr={lgb_best.get('learning_rate', 0):.4f}, leaves={lgb_best.get('num_leaves')}")
 
                 if on_progress:
-                    on_progress(94.0, f"Optuna done: num_models={optimized_params.get('num_models')}, decay={optimized_params.get('decay', 0.5):.2f}")
+                    on_progress(94.0, f"Optuna done: lr={lgb_best.get('learning_rate', 0):.4f}, leaves={lgb_best.get('num_leaves')}")
 
             try:
                 best_model = self._train_model(
