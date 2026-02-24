@@ -93,6 +93,9 @@ class Predictor:
         model_name: str,
         trade_date: date,
         top_k: int = 10,
+        *,
+        preloaded_model: Any = None,
+        preloaded_factors: list[dict] | None = None,
     ) -> tuple[date, list[dict]]:
         """
         預測指定交易日的 Top K 股票
@@ -106,6 +109,8 @@ class Predictor:
             model_name: 模型名稱 (YYYYMM-hash 格式)
             trade_date: 預計交易日期（買入日）
             top_k: 返回前 K 名股票
+            preloaded_model: 預載入的模型（跳過從磁碟讀取）
+            preloaded_factors: 預載入的因子列表
 
         Returns:
             (特徵資料日期, [{"symbol": ..., "score": ..., "rank": ...}])
@@ -113,7 +118,11 @@ class Predictor:
         self._init_qlib()
         from qlib.data import D
 
-        model, factors, config = self._load_model(model_name)
+        if preloaded_model is not None and preloaded_factors is not None:
+            model = preloaded_model
+            factors = preloaded_factors
+        else:
+            model, factors, config = self._load_model(model_name)
 
         instruments = self._get_instruments()
         if not instruments:

@@ -327,6 +327,23 @@ class WalkForwardBacktest(Base):
     completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
+class DailyPrediction(Base):
+    """每日預測記錄（紙上交易追蹤）"""
+
+    __tablename__ = "daily_predictions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    trade_date: Mapped[date] = mapped_column(Date, unique=True, index=True)
+    feature_date: Mapped[date] = mapped_column(Date)
+    model_name: Mapped[str] = mapped_column(String(100))
+    model_week: Mapped[str] = mapped_column(String(10))
+    is_fallback: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_incremental: Mapped[bool] = mapped_column(Boolean, default=False)
+    incremental_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    signals: Mapped[str] = mapped_column(Text)  # JSON
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=now_taipei)
+
+
 # =============================================================================
 # 訓練品質監控
 # =============================================================================

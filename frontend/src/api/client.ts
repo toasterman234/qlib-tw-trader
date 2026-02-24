@@ -351,7 +351,7 @@ export const modelApi = {
 export interface PredictionRequest {
   model_id: number
   top_k: number
-  trade_date?: string  // 預計交易日期，YYYY-MM-DD 格式，null = 最新資料日期的下一天
+  trade_date?: string
 }
 
 export interface PredictionSignal {
@@ -362,15 +362,43 @@ export interface PredictionSignal {
 }
 
 export interface PredictionsResponse {
-  trade_date: string  // 預計交易日期
-  feature_date: string  // 實際使用的特徵資料日期
+  trade_date: string
+  feature_date: string
   model_name: string
   signals: PredictionSignal[]
+}
+
+export interface TodayPredictionDetail {
+  trade_date: string
+  feature_date: string
+  model_name: string
+  model_week: string
+  is_fallback: boolean
+  is_incremental: boolean
+  incremental_days: number | null
+  signals: PredictionSignal[]
+  created_at: string | null
+}
+
+export interface TodayPredictionStatus {
+  today: string
+  week_id: string
+  has_prediction: boolean
+  prediction: TodayPredictionDetail | null
+  model_available: boolean
+  model_name: string | null
+  model_week: string | null
+  is_fallback: boolean
+  message: string | null
 }
 
 export const portfolioApi = {
   generatePredictions: (data: PredictionRequest) =>
     api.post<PredictionsResponse>('/predictions/generate', data),
+  todayStatus: () =>
+    api.get<TodayPredictionStatus>('/predictions/today'),
+  generateToday: () =>
+    api.post<{ job_id: string; status: string }>('/predictions/today/generate', {}),
 }
 
 // Dashboard Types

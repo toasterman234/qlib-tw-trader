@@ -29,3 +29,31 @@ class PredictionsResponse(BaseModel):
     feature_date: str  # 實際使用的特徵資料日期
     model_name: str
     signals: list[PredictionSignal]
+
+
+class TodayPredictionDetail(BaseModel):
+    """今日預測詳情"""
+
+    trade_date: str
+    feature_date: str
+    model_name: str
+    model_week: str
+    is_fallback: bool
+    is_incremental: bool
+    incremental_days: int | None
+    signals: list[PredictionSignal]
+    created_at: str | None
+
+
+class TodayPredictionStatus(BaseModel):
+    """今日預測狀態"""
+
+    today: str
+    week_id: str
+    has_prediction: bool
+    prediction: TodayPredictionDetail | None
+    model_available: bool
+    model_name: str | None
+    model_week: str | None
+    is_fallback: bool
+    message: str | None
