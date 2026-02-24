@@ -68,7 +68,18 @@ TOP_K = 10
 
 def compute_run_hash() -> str:
     from src.repositories.factors import ALL_FACTORS
-    config = f"{LABEL_EXPR}|{len(ALL_FACTORS)}|{START_MODEL_WEEK}~{END_MODEL_WEEK}"
+
+    model_type = "unknown"
+    models_dir = Path(MODELS_DIR)
+    if models_dir.exists():
+        for d in sorted(models_dir.iterdir()):
+            if d.is_dir() and (d / "model.pkl").exists():
+                with open(d / "model.pkl", "rb") as f:
+                    model = pickle.load(f)
+                model_type = type(model).__name__
+                break
+
+    config = f"{model_type}|{LABEL_EXPR}|{len(ALL_FACTORS)}|{START_MODEL_WEEK}~{END_MODEL_WEEK}"
     return hashlib.md5(config.encode()).hexdigest()[:8]
 
 
