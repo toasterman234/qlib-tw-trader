@@ -4,7 +4,7 @@
 
 ## 專案目標
 
-使用 qlib 進行台股預測，透過 IC 增量選擇法挑選因子，產生每日交易訊號。
+使用 qlib 進行台股預測，產生每日交易訊號。
 
 ## 快速指令
 
@@ -210,6 +210,7 @@ df.sort_values(by=["score", "symbol"], ascending=[False, True]).head(top_k)
 
 | 腳本 | 用途 | 執行方式 |
 |------|------|---------|
+| `evaluate_models.py` | 模型評估：策略回測 + 模型診斷 + 弱點分析，輸出到 `output/{hash}/` | `python scripts/evaluate_models.py` |
 | `analyze_intraday_price.py` | 日內價格分析：各時段與收盤價偏差、最佳買賣時段 | `python scripts/analyze_intraday_price.py` |
 | `simulate_timing.py` | 交易時段成本比較：早賣午買 vs 開盤 vs 收盤 | `python scripts/simulate_timing.py` |
 
