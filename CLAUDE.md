@@ -109,45 +109,28 @@ exporter.export(ExportConfig(
 
 例：`202502-a1b2c3`
 
-## 超參數縮放原理
+## DoubleEnsemble 模型
 
-### 核心洞察
+### 演算法（ICDM 2020）
 
-基準超參數是基於全部因子（~300 個）調校的，但訓練時 IC 增量選擇只會選出部分因子。
-**超參數需要根據實際因子數量動態縮放。**
+使用 K 個 LightGBM 子模型的迭代集成，每輪之間進行：
+- **Sample Reweighting (SR)**：根據 learning trajectory 調高難學樣本的權重
+- **Feature Selection (FS)**：permutation importance 過濾低貢獻因子
 
-### 為什麼可以縮放？
+### 為什麼用 DoubleEnsemble？
 
-超參數控制的是「模型容量 vs 資料特性」的平衡，而非特定因子組合：
+| 模型 | Qlib Alpha158 IC | 年化回報 |
+|------|-------------------|----------|
+| DoubleEnsemble | 0.0521 | 11.58% |
+| LightGBM | 0.0448 | 9.08% |
 
-```
-我們訓練的是：「我們的股票資料 + N 維輸入的最佳模型複雜度」
-```
+內建 feature selection 解決了 LightGBM 單模型的 feature importance bias 問題。
 
-當因子從 30 減到 5 時：
-- **不變**：樣本數量、噪音水平、標籤分佈
-- **減少**：輸入維度 → 需要的模型容量
+### 實作
 
-### 縮放公式
-
-```python
-# src/services/model_trainer.py
-sqrt_ratio = sqrt(actual_factor_count / base_factor_count)
-
-num_leaves: 31 → 8      # 模型容量隨維度縮小
-max_depth: 5 → 3        # 交互深度減少
-min_data_in_leaf: 44 → 11  # 允許更細的分割
-lambda_l1/l2: 縮小      # 低維需較少正則化
-```
-
-### 效果
-
-| 指標 | 縮放前 | 縮放後 |
-|------|--------|--------|
-| 選出因子數 | 2-4 | 5-8 |
-| IC 範圍 | 0.03-0.04 | 0.05-0.06 |
-
-**原因**：適當的模型複雜度讓系統能正確檢測因子貢獻，而非因過擬合提早停止選擇。
+- `src/services/double_ensemble.py`：獨立 wrapper，相容 `lgb.Booster.predict()` 介面
+- 不依賴 Qlib 的 `DEnsembleModel`（它要求 `DatasetH`）
+- 增量更新：對每個子模型分別用 `lgb.train(init_model=...)` 更新
 
 ## 預測與交易時序
 

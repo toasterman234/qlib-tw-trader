@@ -1,9 +1,10 @@
 """
-增量學習服務 - 使用 LightGBM init_model 進行模型增量更新
+增量學習服務 - 支援 DoubleEnsemble 和 LightGBM 的增量更新
 """
 
 from datetime import date
 from pathlib import Path
+from typing import Any
 
 import lightgbm as lgb
 import numpy as np
@@ -141,17 +142,17 @@ class IncrementalLearner:
 
     def update(
         self,
-        base_model: lgb.Booster,
+        base_model: Any,
         factors: list[dict],
         update_start: date,
         update_end: date,
         num_boost_round: int = 50,
-    ) -> lgb.Booster | None:
+    ) -> Any | None:
         """
-        對模型進行增量更新
+        對模型進行增量更新（支援 DoubleEnsemble 和 LightGBM）
 
         Args:
-            base_model: 原始 LightGBM 模型
+            base_model: DoubleEnsembleModel 或 lgb.Booster
             factors: 因子列表
             update_start: 更新資料開始日期
             update_end: 更新資料結束日期
@@ -166,21 +167,21 @@ class IncrementalLearner:
 
         X, y = data
 
-        # 建立 LightGBM Dataset
-        train_data = lgb.Dataset(X.values, label=y.values)
+        if hasattr(base_model, "incremental_update"):
+            base_model.incremental_update(X.values, y.values, num_boost_round)
+            return base_model
 
-        # 增量學習參數（較溫和的學習率）
+        # Legacy: lgb.Booster
+        train_data = lgb.Dataset(X.values, label=y.values)
         params = {
             "objective": "regression",
             "metric": "l2",
             "boosting_type": "gbdt",
-            "learning_rate": 0.01,  # 較小的學習率避免遺忘
+            "learning_rate": 0.01,
             "verbosity": -1,
             "seed": 42,
         }
-
-        # 使用 init_model 進行增量更新
-        updated_model = lgb.train(
+        return lgb.train(
             params,
             train_data,
             num_boost_round=num_boost_round,
@@ -188,16 +189,14 @@ class IncrementalLearner:
             keep_training_booster=True,
         )
 
-        return updated_model
-
     def update_to_date(
         self,
-        base_model: lgb.Booster,
+        base_model: Any,
         factors: list[dict],
         model_train_end: date,
         target_date: date,
         num_boost_round: int = 50,
-    ) -> tuple[lgb.Booster, int] | None:
+    ) -> tuple[Any, int] | None:
         """
         將模型增量更新到指定日期
 

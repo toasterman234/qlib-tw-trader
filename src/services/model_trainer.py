@@ -1,5 +1,5 @@
 """
-模型訓練服務 - LightGBM + RD-Agent IC 去重複
+模型訓練服務 - DoubleEnsemble + RD-Agent IC 去重複
 """
 
 import hashlib
@@ -52,68 +52,29 @@ class TrainingResult:
     all_results: list[FactorEvalResult]
 
 
-def get_conservative_default_params(factor_count: int) -> dict:
-    """
-    根據因子數量返回保守的預設參數
-
-    設計原則：寧可欠擬合也不過擬合
-    """
-    base = {
-        "objective": "regression",
-        "metric": "mse",
-        "boosting_type": "gbdt",
-        "verbosity": -1,
-        "seed": 42,
-        "feature_pre_filter": False,
-        "learning_rate": 0.05,
-        "bagging_fraction": 0.8,
-        "bagging_freq": 5,
-        "device": "gpu",
-        "gpu_use_dp": False,
-    }
-
-    if factor_count <= 3:
-        base.update({
-            "num_leaves": 8,
-            "max_depth": 3,
-            "min_data_in_leaf": 15,
-            "feature_fraction": 1.0,
-            "lambda_l1": 2.0,
-            "lambda_l2": 2.0,
-        })
-    elif factor_count <= 6:
-        base.update({
-            "num_leaves": 12,
-            "max_depth": 4,
-            "min_data_in_leaf": 18,
-            "feature_fraction": 0.9,
-            "lambda_l1": 3.0,
-            "lambda_l2": 3.0,
-        })
-    elif factor_count <= 12:
-        base.update({
-            "num_leaves": 16,
-            "max_depth": 4,
-            "min_data_in_leaf": 20,
-            "feature_fraction": 0.8,
-            "lambda_l1": 5.0,
-            "lambda_l2": 5.0,
-        })
-    else:
-        base.update({
-            "num_leaves": 24,
-            "max_depth": 5,
-            "min_data_in_leaf": 30,
-            "feature_fraction": 0.8,
-            "lambda_l1": 8.0,
-            "lambda_l2": 8.0,
-        })
-
-    return base
+DEFAULT_LGB_PARAMS = {
+    "objective": "regression",
+    "metric": "mse",
+    "boosting_type": "gbdt",
+    "num_leaves": 31,
+    "max_depth": 5,
+    "learning_rate": 0.05,
+    "feature_fraction": 0.8,
+    "bagging_fraction": 0.8,
+    "bagging_freq": 5,
+    "lambda_l1": 5.0,
+    "lambda_l2": 5.0,
+    "min_data_in_leaf": 30,
+    "verbosity": -1,
+    "seed": 42,
+    "feature_pre_filter": False,
+    "device": "gpu",
+    "gpu_use_dp": False,
+}
 
 
 class ModelTrainer:
-    """模型訓練器 - LightGBM IC 增量選擇法 + Optuna 超參數優化"""
+    """模型訓練器 - DoubleEnsemble + Optuna 超參數優化"""
 
     # Optuna 調參設定
     OPTUNA_N_TRIALS = 50  # 搜索次數
@@ -355,20 +316,14 @@ class ModelTrainer:
         on_progress: Callable[[float, str], None] | None = None,
     ) -> dict:
         """
-        使用 Optuna 優化 LightGBM 超參數
+        使用 Optuna 優化 DoubleEnsemble 超參數
 
-        Args:
-            X_train, y_train: 訓練資料
-            X_valid, y_valid: 驗證資料
-            n_trials: 搜索次數（預設 OPTUNA_N_TRIALS）
-            timeout: 超時秒數（預設 OPTUNA_TIMEOUT）
-            on_progress: 進度回調
-
-        Returns:
-            最佳超參數字典
+        搜索 LightGBM 子模型參數 + DoubleEnsemble 特有參數（num_models, decay）。
+        每個 trial 訓練完整 DoubleEnsemble（較慢），因此 n_trials 預設較低。
         """
         import optuna
-        import lightgbm as lgb
+
+        from src.services.double_ensemble import DoubleEnsembleModel
 
         optuna.logging.set_verbosity(optuna.logging.WARNING)
 
@@ -381,72 +336,47 @@ class ModelTrainer:
         X_train_norm = self._zscore_by_date(X_train_processed).fillna(0)
         X_valid_norm = self._zscore_by_date(X_valid_processed).fillna(0)
 
-        train_data = lgb.Dataset(X_train_norm.values, label=y_train.values)
-        valid_data = lgb.Dataset(X_valid_norm.values, label=y_valid.values, reference=train_data)
-
-        # 計算數據特徵，用於動態設定搜索範圍
-        n_samples = len(X_train)
-        n_features = X_train.shape[1]
-
-        # 動態計算搜索範圍
-        # num_leaves 上限根據樣本數調整
-        max_leaves = min(64, max(16, int(n_samples ** 0.3)))
-        max_min_data = max(50, n_samples // 200)
-
-        # 正則化範圍根據樣本數量動態調整
-        # Qlib A股: ~3000股 x 252天 = 756,000 樣本 → L1=206, L2=581
-        # 我們台股: ~100股 x 252天 = 25,200 樣本 → 需要更弱的正則化
-        # 規則：樣本越少，正則化應該越弱（避免欠擬合）
-        scale_factor = max(0.1, min(1.0, n_samples / 100000))  # 相對於 10 萬樣本
-        lambda_max = max(1.0, 50.0 * scale_factor)  # 最大 L1/L2
-        logger.info(f"Optuna search: n_samples={n_samples}, scale={scale_factor:.2f}, lambda_max={lambda_max:.1f}")
-
-        best_ic = [0.0]  # 用 list 以便在閉包中修改
+        best_ic = [0.0]
         trial_count = [0]
 
         def objective(trial: optuna.Trial) -> float:
-            params = {
+            # DoubleEnsemble 特有參數
+            num_models = trial.suggest_int("num_models", 3, 8)
+            decay = trial.suggest_float("decay", 0.3, 0.9)
+
+            # LightGBM 子模型參數
+            lgb_params = {
                 "objective": "regression",
                 "metric": "mse",
                 "boosting_type": "gbdt",
                 "verbosity": -1,
                 "seed": 42,
                 "feature_pre_filter": False,
-                # 搜索的超參數（範圍根據資料規模調整）
-                "num_leaves": trial.suggest_int("num_leaves", 8, max_leaves),
-                "max_depth": trial.suggest_int("max_depth", 3, 6),
+                "device": "gpu",
+                "gpu_use_dp": False,
                 "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.1, log=True),
-                "feature_fraction": trial.suggest_float("feature_fraction", 0.6, 1.0),
+                "num_leaves": trial.suggest_int("num_leaves", 16, 48),
+                "max_depth": trial.suggest_int("max_depth", 3, 6),
+                "lambda_l1": trial.suggest_float("lambda_l1", 0.01, 20.0, log=True),
+                "lambda_l2": trial.suggest_float("lambda_l2", 0.01, 20.0, log=True),
                 "bagging_fraction": trial.suggest_float("bagging_fraction", 0.6, 1.0),
-                "bagging_freq": trial.suggest_int("bagging_freq", 1, 5),
-                # 正則化範圍根據樣本數動態調整（小資料集用弱正則化）
-                "lambda_l1": trial.suggest_float("lambda_l1", 0.001, lambda_max, log=True),
-                "lambda_l2": trial.suggest_float("lambda_l2", 0.001, lambda_max, log=True),
-                "min_data_in_leaf": trial.suggest_int("min_data_in_leaf", 10, max_min_data),
+                "bagging_freq": 5,
             }
 
-            # 訓練模型
-            model = lgb.train(
-                params,
-                train_data,
-                num_boost_round=300,
-                valid_sets=[valid_data],
-                callbacks=[
-                    lgb.early_stopping(stopping_rounds=50, verbose=False),
-                ],
+            model = DoubleEnsembleModel(
+                num_models=num_models,
+                epochs=50,  # 快速搜索用較少 epochs
+                decay=decay,
+                early_stopping_rounds=10,
+                **lgb_params,
+            )
+            model.fit(
+                X_train_norm.values, y_train.values,
+                X_valid_norm.values, y_valid.values,
             )
 
-            # 計算 IC
             predictions = model.predict(X_valid_norm.values)
-
-            # 模型退化檢查：預測值全部相同代表超參數組合不佳
             if np.unique(predictions).size <= 1:
-                logger.debug(
-                    f"Optuna trial {trial_count[0] + 1}: constant predictions "
-                    f"(leaves={params['num_leaves']}, depth={params['max_depth']}, "
-                    f"min_leaf={params['min_data_in_leaf']}, "
-                    f"L1={params['lambda_l1']:.3f}, L2={params['lambda_l2']:.3f})"
-                )
                 return 0.0
 
             pred_df = pd.DataFrame({
@@ -465,7 +395,6 @@ class ModelTrainer:
             mean_ic = daily_ic.mean()
             ic = float(mean_ic) if not np.isnan(mean_ic) else 0.0
 
-            # 更新進度
             trial_count[0] += 1
             if ic > best_ic[0]:
                 best_ic[0] = ic
@@ -478,24 +407,30 @@ class ModelTrainer:
 
             return ic
 
-        # 執行優化
         study = optuna.create_study(direction="maximize")
         study.optimize(objective, n_trials=n_trials, timeout=timeout, show_progress_bar=False)
 
-        # 返回最佳參數
-        best_params = {
-            "objective": "regression",
-            "metric": "mse",
-            "boosting_type": "gbdt",
-            "verbosity": -1,
-            "seed": 42,
-            "feature_pre_filter": False,
-            **study.best_params,
+        # 分離 DoubleEnsemble 參數和 LightGBM 參數
+        best = study.best_params
+        result = {
+            "num_models": best.pop("num_models", 6),
+            "decay": best.pop("decay", 0.5),
+            "lgb_params": {
+                "objective": "regression",
+                "metric": "mse",
+                "boosting_type": "gbdt",
+                "verbosity": -1,
+                "seed": 42,
+                "feature_pre_filter": False,
+                "device": "gpu",
+                "gpu_use_dp": False,
+                **best,
+            },
         }
 
-        return best_params
+        return result
 
-    def _train_lgbm(
+    def _train_model(
         self,
         X_train: pd.DataFrame,
         y_train: pd.Series,
@@ -504,68 +439,40 @@ class ModelTrainer:
         params: dict | None = None,
     ) -> Any:
         """
-        訓練 LightGBM 模型
+        訓練 DoubleEnsemble 模型
 
         Args:
             X_train, y_train: 訓練資料
             X_valid, y_valid: 驗證資料
-            params: 超參數（若為 None，使用優化後的參數或預設值）
+            params: 超參數字典，包含 num_models, decay, lgb_params
 
         Returns:
-            訓練好的 LightGBM Booster
+            訓練好的 DoubleEnsembleModel
         """
-        import lightgbm as lgb
+        from src.services.double_ensemble import DoubleEnsembleModel
 
-        # 1. 處理無窮大值
         X_train = self._process_inf(X_train)
         X_valid = self._process_inf(X_valid)
-
-        # 2. 每日截面標準化
-        X_train_norm = self._zscore_by_date(X_train)
-        X_valid_norm = self._zscore_by_date(X_valid)
-
-        # 3. 填補 NaN（標準化後可能產生 NaN）
-        X_train_norm = X_train_norm.fillna(0)
-        X_valid_norm = X_valid_norm.fillna(0)
-
-        # 建立 LightGBM Dataset
-        train_data = lgb.Dataset(X_train_norm.values, label=y_train.values)
-        valid_data = lgb.Dataset(X_valid_norm.values, label=y_valid.values, reference=train_data)
-
-        # 使用參數優先級：傳入參數 > 優化後參數 > 預設參數
-        if params is None:
-            params = self._optimized_params
+        X_train_norm = self._zscore_by_date(X_train).fillna(0)
+        X_valid_norm = self._zscore_by_date(X_valid).fillna(0)
 
         if params is None:
-            # 預設參數（作為 fallback）
-            params = {
-                "objective": "regression",
-                "metric": "mse",
-                "boosting_type": "gbdt",
-                "num_leaves": 64,
-                "max_depth": 6,
-                "learning_rate": 0.05,
-                "feature_fraction": 0.8,
-                "bagging_fraction": 0.8,
-                "bagging_freq": 5,
-                "lambda_l1": 10.0,
-                "lambda_l2": 10.0,
-                "verbosity": -1,
-                "seed": 42,
-                "feature_pre_filter": False,
-                "device": "gpu",
-                "gpu_use_dp": False,
-            }
+            params = self._optimized_params or {}
 
-        # 訓練
-        model = lgb.train(
-            params,
-            train_data,
-            num_boost_round=500,
-            valid_sets=[valid_data],
-            callbacks=[
-                lgb.early_stopping(stopping_rounds=50, verbose=False),
-            ],
+        lgb_params = params.get("lgb_params", DEFAULT_LGB_PARAMS)
+        num_models = params.get("num_models", 6)
+        decay = params.get("decay", 0.5)
+
+        model = DoubleEnsembleModel(
+            num_models=num_models,
+            epochs=100,
+            decay=decay,
+            early_stopping_rounds=20,
+            **lgb_params,
+        )
+        model.fit(
+            X_train_norm.values, y_train.values,
+            X_valid_norm.values, y_valid.values,
         )
 
         return model
@@ -730,10 +637,8 @@ class ModelTrainer:
             if all_data.empty:
                 raise ValueError("No data available for the specified date range")
 
-            # 使用保守預設值進行因子選擇，選擇後自動運行 Optuna 找最佳超參數
-            self._optimized_params = get_conservative_default_params(len(enabled_factors))
-            self._optimized_params["device"] = "gpu"
-            self._optimized_params["gpu_use_dp"] = False
+            # DoubleEnsemble 預設參數，選擇後自動運行 Optuna 找最佳超參數
+            self._optimized_params = {"lgb_params": dict(DEFAULT_LGB_PARAMS)}
             self._auto_optuna = True
             if on_progress:
                 on_progress(10.0, "Will auto-tune with Optuna after factor selection")
@@ -791,10 +696,8 @@ class ModelTrainer:
                 model_name = f"{valid_end.strftime('%Y%m')}-{short_hash}"
 
             # === 增量更新（驗證後重訓）===
-            # 根據設計文檔：訓練完成後，用驗證期資料做增量更新
+            # 訓練完成後，用驗證期資料做增量更新
             # 保存的是 A'（增量更新後的模型），但報告的是 A 的 IC
-            import lightgbm as lgb
-
             incremented_model = best_model
             if best_model is not None and selected_factors:
                 if on_progress:
@@ -813,37 +716,18 @@ class ModelTrainer:
                 y_valid_incr = y_valid_incr.loc[common_idx]
 
                 if not X_valid_incr.empty:
-                    # 處理和標準化（與主訓練流程保持一致！）
                     X_valid_processed = self._process_inf(X_valid_incr)
                     X_valid_norm = self._zscore_by_date(X_valid_processed).fillna(0)
-                    # Label 使用 CSRankNorm（排名標準化），與主訓練流程一致
-                    # 不要用 _zscore_by_date，因為模型學習的是預測排名，不是 z-score
                     y_valid_rank = self._rank_by_date(y_valid_incr)
 
-                    # 增量更新：使用 init_model
-                    valid_data = lgb.Dataset(X_valid_norm.values, label=y_valid_rank.values)
-
-                    # 使用相同參數，但從 best_model 開始
-                    incr_params = self._optimized_params or {
-                        "objective": "regression",
-                        "metric": "mse",
-                        "boosting_type": "gbdt",
-                        "verbosity": -1,
-                        "seed": 42,
-                    }
-
                     try:
-                        incremented_model = lgb.train(
-                            incr_params,
-                            valid_data,
-                            num_boost_round=50,  # 少量更新
-                            init_model=best_model,
-                            keep_training_booster=True,
+                        best_model.incremental_update(
+                            X_valid_norm.values, y_valid_rank.values, num_boost_round=50
                         )
+                        incremented_model = best_model
                         if on_progress:
                             on_progress(98.0, "Incremental update completed")
                     except Exception as e:
-                        # 增量更新失敗，使用原模型
                         if on_progress:
                             on_progress(98.0, f"Incremental update failed: {e}, using original model")
                         incremented_model = best_model
@@ -881,9 +765,7 @@ class ModelTrainer:
                 "incremental_updated": incremented_model is not best_model,
             }
             if self._optimized_params:
-                tuned_params = {k: v for k, v in self._optimized_params.items()
-                               if k not in ("objective", "metric", "boosting_type", "verbosity", "seed")}
-                config["hyperparameters"] = tuned_params
+                config["hyperparameters"] = self._optimized_params
 
             self._save_model_files(
                 model_name=model_name,
@@ -977,8 +859,6 @@ class ModelTrainer:
         Returns:
             (selected_factors, all_results, best_model, selection_stats)
         """
-        import lightgbm as lgb
-
         if on_progress:
             on_progress(11.0, "Robust selection: Preparing data...")
 
@@ -992,20 +872,6 @@ class ModelTrainer:
                      (all_data.index.get_level_values("datetime").date <= train_end)
         X_train = X[train_mask]
         y_train = y[train_mask]
-
-        # 準備 LightGBM 參數
-        lgbm_params = self._optimized_params or {
-            "objective": "regression",
-            "metric": "mse",
-            "boosting_type": "gbdt",
-            "num_leaves": 31,
-            "max_depth": 5,
-            "learning_rate": 0.05,
-            "n_estimators": 100,
-            "verbose": -1,
-            "device": "gpu",
-            "gpu_use_dp": False,
-        }
 
         # 執行三階段選擇
         def robust_progress(p: float, msg: str) -> None:
@@ -1082,41 +948,33 @@ class ModelTrainer:
             # 如果需要自動調參，在訓練前運行 Optuna
             if self._auto_optuna:
                 if on_progress:
-                    on_progress(92.0, f"Auto-tuning hyperparameters with Optuna ({len(selected_factors)} factors)...")
+                    on_progress(92.0, f"Auto-tuning DoubleEnsemble with Optuna ({len(selected_factors)} factors)...")
 
-                # 定義 Optuna 進度回調
                 def optuna_progress(p: float, msg: str) -> None:
                     if on_progress:
-                        # 92% ~ 94% 給 Optuna
                         progress = 92.0 + p * 0.02
                         on_progress(progress, msg)
 
-                # 運行 Optuna（使用選出的因子）
-                lgbm_params = self._optimize_hyperparameters(
+                optimized_params = self._optimize_hyperparameters(
                     X_train=X_train_clean,
                     y_train=y_train_final,
                     X_valid=X_valid_clean,
                     y_valid=y_valid_final,
-                    n_trials=30,  # 快速搜尋
-                    timeout=180,  # 3 分鐘超時
+                    n_trials=15,  # DoubleEnsemble 每 trial 較慢，減少次數
+                    timeout=300,  # 5 分鐘超時
                     on_progress=optuna_progress,
                 )
-                self._optimized_params = lgbm_params
-                logger.info(f"Optuna found best params: L1={lgbm_params.get('lambda_l1', 0):.3f}, L2={lgbm_params.get('lambda_l2', 0):.3f}")
+                self._optimized_params = optimized_params
+                logger.info(f"Optuna found best params: num_models={optimized_params.get('num_models')}, decay={optimized_params.get('decay')}")
 
                 if on_progress:
-                    on_progress(94.0, f"Optuna done: L1={lgbm_params.get('lambda_l1', 0):.2f}, L2={lgbm_params.get('lambda_l2', 0):.2f}")
+                    on_progress(94.0, f"Optuna done: num_models={optimized_params.get('num_models')}, decay={optimized_params.get('decay', 0.5):.2f}")
 
             try:
-                train_data = lgb.Dataset(X_train_norm.values, label=y_train_final.values)
-                valid_data = lgb.Dataset(X_valid_norm.values, label=y_valid_final.values)
-
-                best_model = lgb.train(
-                    lgbm_params,
-                    train_data,
-                    num_boost_round=500,
-                    valid_sets=[valid_data],
-                    callbacks=[lgb.early_stopping(50, verbose=False)],
+                best_model = self._train_model(
+                    X_train_clean, y_train_final,
+                    X_valid_clean, y_valid_final,
+                    params=self._optimized_params,
                 )
             except Exception as e:
                 if on_progress:
