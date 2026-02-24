@@ -1218,10 +1218,10 @@ def analyze_overfit(
             if pred_date not in day_to_idx:
                 continue
             idx = day_to_idx[pred_date]
-            if idx + 2 >= len(trading_days):
+            if idx + 3 >= len(trading_days):
                 continue
             t_buy = trading_days[idx + 1]
-            t_sell = trading_days[idx + 2]
+            t_sell = trading_days[idx + 3]
             if t_buy not in close_wide.index or t_sell not in close_wide.index:
                 continue
             returns = (close_wide.loc[t_sell] - close_wide.loc[t_buy]) / close_wide.loc[t_buy]
