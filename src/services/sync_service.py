@@ -19,8 +19,8 @@ class SyncService:
     """資料同步服務"""
 
     FINMIND_URL = "https://api.finmindtrade.com/api/v4/data"
-    TWSE_RWD_URL = "https://www.twse.com.tw/rwd/zh/afterTrading/STOCK_DAY_ALL"
-    TWSE_PER_URL = "https://www.twse.com.tw/rwd/zh/afterTrading/BWIBBU_ALL"
+    TWSE_DAILY_URL = "https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL"
+    TWSE_PER_URL = "https://openapi.twse.com.tw/v1/exchangeReport/BWIBBU_ALL"
     TWSE_INSTITUTIONAL_URL = "https://www.twse.com.tw/rwd/zh/fund/T86"
     TWSE_MARGIN_URL = "https://www.twse.com.tw/rwd/zh/marginTrading/MI_MARGN"
 
@@ -390,70 +390,71 @@ class SyncService:
             "missing_dates": [d.isoformat() for d in still_missing],
         }
 
+    @staticmethod
+    def _parse_roc_date(roc_str: str) -> date | None:
+        """解析民國年日期字串（如 '1150223'）為 date"""
+        roc_str = roc_str.strip()
+        if len(roc_str) != 7:
+            return None
+        try:
+            year = int(roc_str[:3]) + 1911
+            month = int(roc_str[3:5])
+            day = int(roc_str[5:7])
+            return date(year, month, day)
+        except (ValueError, TypeError):
+            return None
+
     async def sync_stock_daily_bulk(self, target_date: date) -> dict:
         """
-        同步全市場當日資料（用 TWSE RWD bulk API）
+        同步全市場當日資料（用 TWSE OpenAPI）
         只儲存股票池內的股票
         Returns: {"date": str, "total": int, "inserted": int}
         """
-        # 取得股票池
         stmt = select(StockUniverse.stock_id)
         universe = {row[0] for row in self._session.execute(stmt).fetchall()}
 
         if not universe:
             return {"date": target_date.isoformat(), "total": 0, "inserted": 0}
 
-        # 呼叫 TWSE RWD API
         async with httpx.AsyncClient() as client:
-            resp = await client.get(self.TWSE_RWD_URL, timeout=30)
-            data = resp.json()
+            resp = await client.get(self.TWSE_DAILY_URL, timeout=30)
+            try:
+                rows = resp.json()
+            except Exception:
+                return {"date": target_date.isoformat(), "total": 0, "inserted": 0, "error": f"TWSE OpenAPI returned non-JSON (HTTP {resp.status_code})"}
 
-        if data.get("stat") != "OK":
-            return {"date": target_date.isoformat(), "total": 0, "inserted": 0, "error": "TWSE API failed"}
+        if not isinstance(rows, list) or not rows:
+            return {"date": target_date.isoformat(), "total": 0, "inserted": 0, "error": "TWSE OpenAPI returned empty data"}
 
-        # 檢查日期
-        data_date_str = data.get("date", "")
-        if data_date_str:
-            data_date = date(
-                int(data_date_str[:4]),
-                int(data_date_str[4:6]),
-                int(data_date_str[6:8]),
-            )
-            if data_date != target_date:
-                return {
-                    "date": target_date.isoformat(),
-                    "total": 0,
-                    "inserted": 0,
-                    "error": f"Data date mismatch: {data_date} != {target_date}",
-                }
+        # 檢查日期（民國年格式，如 '1150223'）
+        data_date = self._parse_roc_date(rows[0].get("Date", ""))
+        if data_date and data_date != target_date:
+            return {
+                "date": target_date.isoformat(),
+                "total": 0,
+                "inserted": 0,
+                "error": f"Data date mismatch: {data_date} != {target_date}",
+            }
 
         # 確保交易日曆有這天
         existing_cal = self._session.get(TradingCalendar, target_date)
         if not existing_cal:
             self._session.add(TradingCalendar(date=target_date, is_trading_day=True))
 
-        # 取得已有資料
         stmt = select(StockDaily.stock_id).where(StockDaily.date == target_date)
         existing_stocks = {row[0] for row in self._session.execute(stmt).fetchall()}
 
-        rows = data.get("data", [])
         inserted = 0
-
         for row in rows:
-            if len(row) < 8:
-                continue
+            stock_id = row.get("Code", "").strip()
 
-            stock_id = row[0].strip()
-
-            # 只儲存股票池內的股票
             if stock_id not in universe:
                 continue
-            # 跳過已存在的
             if stock_id in existing_stocks:
                 continue
 
-            open_val = self._safe_decimal(row[4])
-            close = self._safe_decimal(row[7])
+            open_val = self._safe_decimal(row.get("OpeningPrice"))
+            close = self._safe_decimal(row.get("ClosingPrice"))
             if open_val is None or close is None:
                 continue
 
@@ -462,10 +463,10 @@ class SyncService:
                     stock_id=stock_id,
                     date=target_date,
                     open=open_val,
-                    high=self._safe_decimal(row[5]) or open_val,
-                    low=self._safe_decimal(row[6]) or open_val,
+                    high=self._safe_decimal(row.get("HighestPrice")) or open_val,
+                    low=self._safe_decimal(row.get("LowestPrice")) or open_val,
                     close=close,
-                    volume=self._safe_int(row[2]),
+                    volume=self._safe_int(row.get("TradeVolume")),
                 )
             )
             inserted += 1
@@ -512,67 +513,52 @@ class SyncService:
 
     async def sync_per_bulk(self, target_date: date) -> dict:
         """
-        同步全市場 PER/PBR/殖利率（用 TWSE RWD bulk API）
+        同步全市場 PER/PBR/殖利率（用 TWSE OpenAPI）
         只儲存股票池內的股票
         Returns: {"date": str, "total": int, "inserted": int}
         """
-        # 取得股票池
         stmt = select(StockUniverse.stock_id)
         universe = {row[0] for row in self._session.execute(stmt).fetchall()}
 
         if not universe:
             return {"date": target_date.isoformat(), "total": 0, "inserted": 0}
 
-        # 呼叫 TWSE RWD API
         async with httpx.AsyncClient() as client:
             resp = await client.get(self.TWSE_PER_URL, timeout=30)
-            data = resp.json()
+            try:
+                rows = resp.json()
+            except Exception:
+                return {"date": target_date.isoformat(), "total": 0, "inserted": 0, "error": f"TWSE OpenAPI returned non-JSON (HTTP {resp.status_code})"}
 
-        if data.get("stat") != "OK":
-            return {"date": target_date.isoformat(), "total": 0, "inserted": 0, "error": "TWSE API failed"}
+        if not isinstance(rows, list) or not rows:
+            return {"date": target_date.isoformat(), "total": 0, "inserted": 0, "error": "TWSE OpenAPI returned empty data"}
 
-        # 檢查日期
-        data_date_str = data.get("date", "")
-        if data_date_str:
-            data_date = date(
-                int(data_date_str[:4]),
-                int(data_date_str[4:6]),
-                int(data_date_str[6:8]),
-            )
-            if data_date != target_date:
-                return {
-                    "date": target_date.isoformat(),
-                    "total": 0,
-                    "inserted": 0,
-                    "error": f"Data date mismatch: {data_date} != {target_date}",
-                }
+        # 檢查日期（民國年格式）
+        data_date = self._parse_roc_date(rows[0].get("Date", ""))
+        if data_date and data_date != target_date:
+            return {
+                "date": target_date.isoformat(),
+                "total": 0,
+                "inserted": 0,
+                "error": f"Data date mismatch: {data_date} != {target_date}",
+            }
 
-        # 取得已有資料
         stmt = select(StockDailyPER.stock_id).where(StockDailyPER.date == target_date)
         existing_stocks = {row[0] for row in self._session.execute(stmt).fetchall()}
 
-        rows = data.get("data", [])
         inserted = 0
-
         for row in rows:
-            if len(row) < 5:
-                continue
+            stock_id = row.get("Code", "").strip()
 
-            stock_id = row[0].strip()
-
-            # 只儲存股票池內的股票
             if stock_id not in universe:
                 continue
-            # 跳過已存在的
             if stock_id in existing_stocks:
                 continue
 
-            # BWIBBU_ALL 欄位: [股票代號, 股票名稱, 本益比, 殖利率(%), 股價淨值比]
-            pe_ratio = self._safe_decimal(row[2])
-            dividend_yield = self._safe_decimal(row[3])
-            pb_ratio = self._safe_decimal(row[4])
+            pe_ratio = self._safe_decimal(row.get("PEratio"))
+            dividend_yield = self._safe_decimal(row.get("DividendYield"))
+            pb_ratio = self._safe_decimal(row.get("PBratio"))
 
-            # 至少要有一個值
             if pe_ratio is None and pb_ratio is None and dividend_yield is None:
                 continue
 
@@ -699,7 +685,10 @@ class SyncService:
 
         async with httpx.AsyncClient() as client:
             resp = await client.get(self.TWSE_INSTITUTIONAL_URL, params=params, timeout=30)
-            data = resp.json()
+            try:
+                data = resp.json()
+            except Exception:
+                return {"date": target_date.isoformat(), "total": 0, "inserted": 0, "error": f"TWSE API returned non-JSON (HTTP {resp.status_code})"}
 
         if data.get("stat") != "OK":
             return {"date": target_date.isoformat(), "total": 0, "inserted": 0, "error": "TWSE API failed"}
@@ -881,7 +870,10 @@ class SyncService:
 
         async with httpx.AsyncClient() as client:
             resp = await client.get(self.TWSE_MARGIN_URL, params=params, timeout=30)
-            data = resp.json()
+            try:
+                data = resp.json()
+            except Exception:
+                return {"date": target_date.isoformat(), "total": 0, "inserted": 0, "error": f"TWSE API returned non-JSON (HTTP {resp.status_code})"}
 
         if data.get("stat") != "OK":
             return {"date": target_date.isoformat(), "total": 0, "inserted": 0, "error": "TWSE API failed"}
@@ -1214,7 +1206,10 @@ class SyncService:
 
         async with httpx.AsyncClient() as client:
             resp = await client.get(self.TWSE_SHAREHOLDING_URL, params=params, timeout=30)
-            data = resp.json()
+            try:
+                data = resp.json()
+            except Exception:
+                return {"date": target_date.isoformat(), "total": 0, "inserted": 0, "error": f"TWSE API returned non-JSON (HTTP {resp.status_code})"}
 
         if data.get("stat") != "OK":
             return {"date": target_date.isoformat(), "total": 0, "inserted": 0, "error": "TWSE API failed"}

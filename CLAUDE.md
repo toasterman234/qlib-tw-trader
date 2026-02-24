@@ -205,4 +205,4 @@ df.sort_values(by=["score", "symbol"], ascending=[False, True]).head(top_k)
 | 2 | FinMind | 600次/時 |
 | 3 | yfinance | 無限制 |
 
-**注意**：不要用 TWSE OpenAPI（`openapi.twse.com.tw`）
+**注意**：日K線和 PER/PBR 使用 TWSE OpenAPI（`openapi.twse.com.tw`），其他用 FinMind
