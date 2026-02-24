@@ -374,6 +374,12 @@ class StrategyResult:
     total_cost: float
 
 
+@dataclass
+class HedgeConfig:
+    sma_period: int
+    cash_ratio: float  # 0.0 = fully cash, 1.0 = fully invested
+
+
 class Strategy(ABC):
     @abstractmethod
     def name(self) -> str: ...
@@ -580,7 +586,8 @@ def build_strategies() -> list[Strategy]:
     ]:
         strategies.append(HoldDropStrategy(k, h, d))
     for k, h, d, b in [
-        (10, 3, 1, 10), (10, 3, 1, 20), (10, 3, 1, 30),
+        (10, 3, 1, 5), (10, 3, 1, 10), (10, 3, 1, 20), (10, 3, 1, 30),
+        (10, 3, 1, 40), (10, 3, 1, 50),
         (10, 4, 1, 10), (10, 4, 1, 20), (10, 4, 1, 30),
     ]:
         strategies.append(HoldDropBottomStrategy(k, h, d, b))
@@ -589,6 +596,24 @@ def build_strategies() -> list[Strategy]:
     for k in [10, 20]:
         strategies.append(ScoreWeightedStrategy(k))
     return strategies
+
+
+def build_hedged_strategies() -> list[tuple[Strategy, HedgeConfig]]:
+    base_strategies = [
+        HoldDropStrategy(10, 3, 1),
+        HoldDropStrategy(10, 4, 1),
+        TopKDropStrategy(10, 1),
+    ]
+    sma_configs = [
+        HedgeConfig(50, 0.0), HedgeConfig(50, 0.5),
+        HedgeConfig(100, 0.0), HedgeConfig(100, 0.5),
+        HedgeConfig(200, 0.0), HedgeConfig(200, 0.5),
+    ]
+    result = []
+    for s in base_strategies:
+        for hc in sma_configs:
+            result.append((s, hc))
+    return result
 
 
 # ══════════════════════════════════════════════════════════════
@@ -606,6 +631,7 @@ def simulate(
     daily_scores: dict[date, pd.Series],
     close_wide: pd.DataFrame,
     trading_days: list,
+    hedge_config: HedgeConfig | None = None,
 ) -> StrategyResult:
     day_to_idx = {d: i for i, d in enumerate(trading_days)}
     holdings: dict[str, int] = {}
@@ -615,6 +641,16 @@ def simulate(
     score_dates = sorted(daily_scores.keys())
     is_score_weighted = isinstance(strategy, ScoreWeightedStrategy)
     k = getattr(strategy, 'k', 10)
+
+    # Precompute market SMA for hedging (no lookahead: uses close up to each date)
+    market_cum = None
+    market_sma = None
+    if hedge_config:
+        market_daily = close_wide.pct_change(fill_method=None).mean(axis=1).fillna(0)
+        market_cum = (1 + market_daily).cumprod()
+        market_sma = market_cum.rolling(
+            hedge_config.sma_period, min_periods=hedge_config.sma_period,
+        ).mean()
 
     for pred_date in score_dates:
         if pred_date not in day_to_idx:
@@ -682,18 +718,34 @@ def simulate(
             day_cost += calc_trade_cost(FIXED_AMOUNT_PER_STOCK, is_sell=False)
         total_position = n_held * FIXED_AMOUNT_PER_STOCK if n_held > 0 else k * FIXED_AMOUNT_PER_STOCK
         cost_rate = day_cost / total_position if total_position > 0 else 0
+
+        # Apply SMA hedging: scale returns by invest_ratio
+        invest_ratio = 1.0
+        if hedge_config and market_cum is not None and market_sma is not None:
+            hedge_date = trading_days[idx]
+            if hedge_date in market_cum.index and hedge_date in market_sma.index:
+                cum_val = market_cum[hedge_date]
+                sma_val = market_sma[hedge_date]
+                if pd.notna(sma_val) and cum_val < sma_val:
+                    invest_ratio = hedge_config.cash_ratio
+
+        gross_return = gross_return * invest_ratio
+        cost_rate = cost_rate * invest_ratio
         net_return = gross_return - cost_rate
 
-        total_cost += day_cost
+        total_cost += day_cost * invest_ratio
         turnover = (n_sell + n_buy) / (2 * n_held) if n_held > 0 else 0
 
         records.append(DailyRecord(
             dt=pred_date, gross_return=gross_return, net_return=net_return,
-            market_return=market_return, cost=day_cost, turnover=turnover,
+            market_return=market_return, cost=day_cost * invest_ratio, turnover=turnover,
             n_holdings=n_held, n_buy=n_buy, n_sell=n_sell,
         ))
 
-    return StrategyResult(name=strategy.name(), records=records, total_cost=total_cost)
+    strat_name = strategy.name()
+    if hedge_config:
+        strat_name += f"+SMA{hedge_config.sma_period}({int(hedge_config.cash_ratio * 100)}%)"
+    return StrategyResult(name=strat_name, records=records, total_cost=total_cost)
 
 
 # ══════════════════════════════════════════════════════════════
@@ -1784,15 +1836,27 @@ def main():
     # 4. 策略回測
     print("\n[4/7] Running strategy backtests...")
     strategies = build_strategies()
+    hedged_strategies = build_hedged_strategies()
+    total_count = len(strategies) + len(hedged_strategies)
     all_results: list[StrategyResult] = []
     all_metrics: list[Metrics] = []
 
     for i, strategy in enumerate(strategies):
-        if (i + 1) % 5 == 0:
-            print(f"  [{i+1}/{len(strategies)}] {strategy.name()}...")
+        if (i + 1) % 10 == 0:
+            print(f"  [{i+1}/{total_count}] {strategy.name()}...")
         result = simulate(strategy, daily_scores, close_wide, trading_days)
         all_results.append(result)
         all_metrics.append(compute_metrics(result))
+
+    for i, (strategy, hc) in enumerate(hedged_strategies):
+        idx = len(strategies) + i + 1
+        if idx % 10 == 0:
+            print(f"  [{idx}/{total_count}] {strategy.name()}+SMA{hc.sma_period}...")
+        result = simulate(strategy, daily_scores, close_wide, trading_days, hedge_config=hc)
+        all_results.append(result)
+        all_metrics.append(compute_metrics(result))
+
+    print(f"  Total: {total_count} strategies ({len(strategies)} base + {len(hedged_strategies)} hedged)")
 
     # 找最佳策略
     best_m = max(
