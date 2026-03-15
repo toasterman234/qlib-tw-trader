@@ -9,140 +9,171 @@
 ![LightGBM](https://img.shields.io/badge/LightGBM-DoubleEnsemble-9ACD32)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-> Quantitative trading system for Taiwan stocks -- DoubleEnsemble model, 300+ factors, Walk-Forward backtesting, and a full-stack dashboard.
+A research-grade quantitative trading platform for Taiwan's top-100 market-cap stocks, covering the full pipeline from data ingestion to model evaluation.
 
-A research-grade quantitative trading platform targeting Taiwan's top-100 market-cap stocks. It handles the full pipeline: data ingestion from TWSE/FinMind/yfinance, factor engineering (~300 factors), model training with Optuna hyperparameter search, 156-week Walk-Forward backtesting, and a React dashboard for monitoring -- all with strict lookahead bias prevention.
+<!-- TODO: Add dashboard screenshot -->
+<!-- ![Dashboard](docs/images/dashboard.png) -->
 
-<!-- TODO: Add screenshot of dashboard -->
-<!-- ![Dashboard Screenshot](docs/images/dashboard.png) -->
+## Walk-Forward Backtest Results
 
-## Key Results (156-Week Walk-Forward)
+All results are **out-of-sample**, from a 156-week (3-year) Walk-Forward backtest with weekly model retraining. No lookahead bias -- T-day trades use only T-1 features.
 
-| Metric | LightGBM | DoubleEnsemble | Improvement |
-|--------|----------|----------------|-------------|
-| **IC** | 0.0107 | 0.0166 | +55% |
-| **IC Decay** | 78.5% | 56.0% | -23pp |
-| **Best Strategy Sharpe** | 1.006 | 1.724 | +71% |
-| **Signal Monotonicity** | 0.90 | 1.00 | Perfect |
+### LightGBM vs DoubleEnsemble
+
+| Metric | LightGBM | DoubleEnsemble | Change |
+|--------|:--------:|:--------------:|:------:|
+| Backtest IC | 0.0107 | **0.0166** | +55% |
+| IC Decay (valid -> backtest) | 78.5% | **56.0%** | -23pp |
+| Best Strategy Sharpe | 1.006 | **1.724** | +71% |
+| Best Excess Return | +0.2% | **+23.9%** | |
+| Quantile Monotonicity (rho) | 0.90 | **1.00** | Perfect |
+| Spread t-stat | 1.25 | **2.30** | Significant |
+
+### Best Strategy: HoldDrop(K=10, H=3, D=1)
+
+| Metric | Value |
+|--------|:-----:|
+| Annualized Return | 55.1% |
+| Annualized Excess | +23.9% |
+| Sharpe Ratio | 1.724 |
+| Max Drawdown | 38.7% |
+| Turnover | 9.9%/week |
+| t-stat | 1.89 |
+
+<details>
+<summary>Yearly breakdown</summary>
+
+| Year | Excess | Sharpe | Win Rate | MaxDD |
+|:----:|:------:|:------:|:--------:|:-----:|
+| 2023 | +80.0% | 2.96 | 54.5% | 18.0% |
+| 2024 | -8.4% | 0.45 | 47.9% | 21.2% |
+| 2025 | +19.6% | 1.62 | 51.3% | 29.4% |
+
+</details>
+
+<details>
+<summary>Comparison with Qlib official benchmarks</summary>
+
+Our IC/ICIR is lower than [Qlib CSI300 benchmarks](https://github.com/microsoft/qlib/tree/main/examples/benchmarks) (IC 0.052, ICIR 0.42), but **Sharpe is higher** (1.72 vs 1.34). This reflects structural differences:
+
+| Factor | Qlib Benchmark | This Project |
+|--------|:--------------:|:------------:|
+| Universe | CSI300 (300 stocks) | TW100 (100 stocks) |
+| Market | China A-shares (retail-driven) | Taiwan (institutional-heavy) |
+| Holding | top-50 | top-10 (concentrated) |
+| Label | 1-day return | 2-day return |
+
+Direct IC comparison is not meaningful across these conditions. The relevant comparison is the **relative improvement** from LightGBM to DoubleEnsemble within the same setup.
+
+</details>
+
+### Market Regime Performance
+
+| Regime | Mean IC | Excess (bps/day) | Win Rate |
+|:------:|:-------:|:-----------------:|:--------:|
+| Bear | **0.0354** | +10.0 | **55.2%** |
+| Sideways | 0.0146 | **+13.4** | 50.0% |
+| Bull | -0.0002 | +1.8 | 50.2% |
+
+The model's ranking ability is strongest in bear markets where stock dispersion is high.
+
+## How It Works
+
+```
+T-1 close     T open      T+2 close
+  |              |             |
+  features  -->  buy    -->   sell     (2-day holding period)
+  computed       signal       exit
+```
+
+**Pipeline:**
+
+1. **Data ingestion** -- OHLCV, PER/PBR, institutional trades, margin trading, monthly revenue from TWSE/FinMind/yfinance
+2. **Factor computation** -- ~300 factors fed to Qlib: Alpha158 price-volume (109), Taiwan institutional flow (107), cross-interaction (50), enhanced (37)
+3. **Model training** -- DoubleEnsemble (ICDM 2020): K LightGBM sub-models with iterative sample reweighting + permutation-based feature selection. The model handles feature selection internally -- no pre-filtering needed
+4. **Walk-Forward** -- Weekly retraining on a 504-day rolling window with 100-day validation and 7-day embargo
+5. **Prediction** -- Daily cross-sectional ranking of top-100 stocks by predicted 2-day return
+6. **Evaluation** -- Multi-strategy backtesting (TopK, TopKDrop, HoldDrop), IC analysis, regime decomposition
 
 ## Features
 
-- **DoubleEnsemble model (ICDM 2020)** -- Iterative ensemble of K LightGBM sub-models with sample reweighting and feature selection. +55% IC and +71% Sharpe over single LightGBM.
-- **~300 factor library** -- Alpha158 price-volume (109), Taiwan institutional flow (107), cross-interaction (50), and enhanced factors (37) covering volatility regime, momentum, liquidity, valuation, and microstructure.
-- **Walk-Forward backtesting** -- 156-week rolling window with per-week model retraining, IC Decay analysis, and multi-strategy comparison.
-- **IC incremental selection** -- Stepwise factor addition with deduplication (0.99 threshold) to select 30-50 effective factors from ~300 candidates.
-- **Lookahead bias prevention** -- Trade on T uses T-1 features only. Label defined as 2-day forward return with 7-day embargo between train and validation sets.
-- **9 data sources** -- Auto-sync OHLCV, adjusted close, PER/PBR, institutional trades, margin trading, and monthly revenue from TWSE, FinMind, and yfinance.
-- **Full-stack dashboard** -- React 18 + Vite + TailwindCSS with WebSocket real-time updates, equity curve charts, and week calendar navigation.
-- **Optuna hyperparameter search** -- Bayesian optimization over DoubleEnsemble parameters (50 trials per training run).
+- **DoubleEnsemble (ICDM 2020)** -- Iterative ensemble with built-in sample reweighting and feature selection. +55% IC over single LightGBM. [[paper]](https://arxiv.org/abs/2010.01265)
+- **~300 factor library** -- Alpha158 OHLCV factors, Taiwan institutional flow (foreign/trust/dealer net buy, margin), cross-interaction terms, and enhanced factors (volatility regime, momentum, liquidity, microstructure)
+- **Walk-Forward backtesting** -- 156-week out-of-sample test with IC Decay analysis, quantile spread, and multi-strategy comparison
+- **Strict lookahead bias prevention** -- T-day trades use T-1 features only. 7-day embargo between train/validation sets. Tie-breaking by stock symbol for reproducibility
+- **Multi-source data sync** -- Auto-sync from TWSE OpenAPI, FinMind, and yfinance with priority fallback
+- **Full-stack dashboard** -- React 18 + WebSocket real-time updates, model evaluation charts, position tracking, factor management
+- **Optuna hyperparameter search** -- Bayesian optimization over model parameters
 
 ## Tech Stack
 
 | Layer | Technologies |
 |-------|-------------|
 | **Backend** | FastAPI, SQLAlchemy 2.0, SQLite (WAL mode) |
-| **Frontend** | React 18, Vite, TailwindCSS, Zustand, Recharts, Lightweight Charts |
-| **Model** | Qlib (Microsoft), LightGBM, DoubleEnsemble (ICDM 2020), Optuna |
-| **Backtesting** | backtrader |
-| **Data** | TWSE OpenAPI, FinMind, yfinance, DVC + Google Drive |
+| **Frontend** | React 18, Vite, TailwindCSS, Zustand, Recharts |
+| **Model** | Qlib (Microsoft), LightGBM, DoubleEnsemble, Optuna |
+| **Data** | TWSE OpenAPI, FinMind, yfinance |
 | **Real-time** | WebSocket |
 
-## Quick Start with Docker
+## Quick Start
 
-The fastest way to get running:
+### Docker (recommended)
 
 ```bash
-# Clone the repository
-git clone https://github.com/your-username/qlib-tw-trader.git
+git clone https://github.com/Docat0209/qlib-tw-trader.git
 cd qlib-tw-trader
 
-# Configure environment
 cp .env.example .env
-# Edit .env with your FinMind API token (optional)
+# Edit .env with your FinMind API token (free: https://finmindtrade.com/)
 
-# Start all services
 docker compose up --build
 ```
 
-- Backend API: http://localhost:8000
 - Frontend: http://localhost:3000
-- Swagger docs: http://localhost:8000/docs
+- Backend API: http://localhost:8000
+- Swagger: http://localhost:8000/docs
 
-> **Note**: The SQLite database (`data/data.db`) and trained models (`data/models/`) are mounted as volumes. If you have pre-existing data via DVC, place them in the `data/` directory before starting.
-
-## Manual Setup
-
-### Prerequisites
-
-- Python 3.12+
-- Node.js 20+
-- Git
-
-### Backend
+### Manual Setup
 
 ```bash
-# Create virtual environment
+# Backend
 python -m venv .venv
-source .venv/bin/activate  # Linux/macOS
-# .venv\Scripts\activate   # Windows
-
-# Install dependencies
+source .venv/bin/activate   # Linux/macOS
+# .venv\Scripts\activate    # Windows
 pip install -r requirements.txt
-
-# Configure environment
 cp .env.example .env
-
-# Start the server
 uvicorn src.interfaces.app:app --reload --port 8000
-```
 
-### Frontend
+# Frontend (separate terminal)
+cd frontend && npm install && npm run dev
 
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-The frontend dev server runs at http://localhost:5173 and proxies API requests to the backend.
-
-### Download Pre-built Data (Optional)
-
-If you have Google Drive Desktop configured:
-
-```bash
-python -m dvc pull
-```
-
-### Initialize Factors
-
-```bash
+# Seed the factor library (~300 factors)
 curl -X POST http://localhost:8000/api/v1/factors/seed
 ```
 
 ## Architecture
 
 ```
-                    ┌──────────────────────────────────────────┐
-                    │             React Dashboard               │
-                    │          Vite + TailwindCSS + Zustand     │
-                    └─────────────────┬────────────────────────┘
-                                      │ HTTP / WebSocket
-                    ┌─────────────────▼────────────────────────┐
-                    │             FastAPI Backend                │
-                    │                                           │
-                    │  ┌───────────┐  ┌──────────────────────┐  │
-                    │  │ Adapters  │  │ Services             │  │
-                    │  │  TWSE     │  │  Model Trainer       │  │
-                    │  │  FinMind  │  │  Predictor           │  │
-                    │  │  yfinance │  │  Walk-Forward Tester │  │
-                    │  └─────┬─────┘  │  Factor Selection    │  │
-                    │        │        │  Qlib Exporter       │  │
-                    │        │        └──────────┬───────────┘  │
-                    │  ┌─────▼───────────────────▼───────────┐  │
-                    │  │  SQLite (WAL) + Qlib .bin exports   │  │
-                    │  └────────────────────────────────────┘  │
-                    └──────────────────────────────────────────┘
+┌──────────────────────────────────────────────┐
+│              React Dashboard                  │
+│        Vite + TailwindCSS + Zustand           │
+└────────────────────┬─────────────────────────┘
+                     │ HTTP / WebSocket
+┌────────────────────▼─────────────────────────┐
+│              FastAPI Backend                   │
+│                                               │
+│  ┌───────────┐  ┌──────────────────────────┐  │
+│  │ Adapters  │  │ Services                 │  │
+│  │  TWSE     │  │  ModelTrainer            │  │
+│  │  FinMind  │  │  WalkForwardBacktester   │  │
+│  │  yfinance │  │  Predictor               │  │
+│  └─────┬─────┘  │  QlibExporter            │  │
+│        │        │  DoubleEnsemble          │  │
+│        │        └────────────┬─────────────┘  │
+│  ┌─────▼─────────────────────▼─────────────┐  │
+│  │   SQLite (WAL) + Qlib .bin exports      │  │
+│  └─────────────────────────────────────────┘  │
+└───────────────────────────────────────────────┘
 ```
 
 ### Project Structure
@@ -150,45 +181,66 @@ curl -X POST http://localhost:8000/api/v1/factors/seed
 ```
 qlib-tw-trader/
 ├── src/
-│   ├── adapters/           # External data source clients
-│   ├── flows/              # Orchestration workflows
+│   ├── adapters/           # TWSE, FinMind, yfinance data clients
 │   ├── interfaces/         # FastAPI routes, schemas, WebSocket
-│   ├── repositories/       # Database access and factor definitions
-│   ├── services/           # Business logic (training, prediction, backtesting)
-│   └── shared/             # Shared types and utilities
-├── frontend/               # React SPA
-├── tests/                  # pytest test suite
-├── scripts/                # Reproducible analysis scripts
-├── data/                   # Database, models, qlib exports (gitignored)
-└── docker-compose.yml      # Container orchestration
+│   ├── repositories/       # Database access + factor definitions (~300)
+│   ├── services/           # Training, prediction, backtesting, Qlib export
+│   └── shared/             # Constants, types, week utilities
+├── frontend/               # React 18 SPA
+├── tests/                  # pytest suite (28 tests)
+├── scripts/                # Analysis scripts (model eval, timing, IC)
+└── data/                   # Database + models + Qlib exports (gitignored)
 ```
 
-## API Documentation
+## Dashboard Pages
 
-Interactive API documentation is available when the backend is running:
+| Page | Description |
+|------|-------------|
+| **Dashboard** | System overview, model stats, quick actions |
+| **Factors** | Factor library CRUD, enable/disable, deduplication |
+| **Training** | Week calendar, batch training, model management |
+| **Evaluation** | Aggregate IC analysis, equity curves, factor importance, CSV/JSON export |
+| **Backtest** | Walk-Forward results, per-week IC, strategy comparison |
+| **Quality** | IC stability monitoring, Jaccard similarity, ICIR tracking |
+| **Predictions** | Today's signals, Top-K stock picks |
+| **Positions** | Current holdings, trade history, holdings timeline |
+| **Datasets** | Data source coverage, sync status, freshness checks |
 
-- **Swagger UI**: http://localhost:8000/docs
-- **ReDoc**: http://localhost:8000/redoc
+## API
+
+Interactive documentation at http://localhost:8000/docs when running.
+
+Key endpoints:
+
+| Endpoint | Description |
+|----------|-------------|
+| `POST /api/v1/sync/all` | Sync all data sources |
+| `POST /api/v1/factors/seed` | Initialize ~300 factors |
+| `POST /api/v1/models/train` | Train model for a specific week |
+| `POST /api/v1/backtest/walk-forward` | Run Walk-Forward backtest |
+| `GET /api/v1/backtest/walk-forward/summary` | Aggregated backtest metrics |
+| `POST /api/v1/predictions/today/generate` | Generate today's predictions |
+| `GET /api/v1/predictions/today` | Get current stock picks |
+| `GET /api/v1/predictions/history` | Prediction history |
 
 ## Data Sources
 
-| Priority | Source | Notes |
-|----------|--------|-------|
-| 1 | TWSE OpenAPI | Official exchange data, available after 17:30 daily |
-| 2 | FinMind | Third-party aggregator, 600 requests/hour (free tier) |
-| 3 | yfinance | Adjusted close prices, no rate limit |
+| Priority | Source | Coverage |
+|:--------:|--------|----------|
+| 1 | TWSE OpenAPI | OHLCV, PER/PBR (available after 17:30 daily) |
+| 2 | FinMind | Institutional trades, margin, monthly revenue (600 req/hr free) |
+| 3 | yfinance | Adjusted close prices (no rate limit) |
 
-## Roadmap
+## References
 
-- [ ] Incremental learning -- daily model weight fine-tuning
-- [ ] Scheduler -- automated daily sync + training pipeline
-- [ ] Dynamic strategy parameters -- adaptive TopK and holding periods
-- [ ] Multi-market support -- extend beyond Taiwan stocks
+- **DoubleEnsemble**: Chuheng Zhang et al. "DoubleEnsemble: A New Ensemble Method Based on Sample Reweighting and Feature Selection for Financial Data Analysis." ICDM 2020. [[paper]](https://arxiv.org/abs/2010.01265)
+- **Qlib**: Yang et al. "Qlib: An AI-oriented Quantitative Investment Platform." 2020. [[repo]](https://github.com/microsoft/qlib)
+- **Alpha158**: Qlib built-in factor set. [[docs]](https://qlib.readthedocs.io/en/latest/component/data.html)
 
 ## Contributing
 
-Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for setup instructions, coding standards, and the development workflow.
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for setup instructions and development workflow.
 
 ## License
 
-This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
+MIT. See [LICENSE](LICENSE).
