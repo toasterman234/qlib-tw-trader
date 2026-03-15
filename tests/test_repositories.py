@@ -197,8 +197,13 @@ class TestShareholdingRepository:
             Shareholding(
                 date=date(2024, 1, 2),
                 stock_id="2330",
+                total_shares=25930380000,
                 foreign_shares=5000000000,
                 foreign_ratio=Decimal("70.50"),
+                foreign_remaining_shares=1000000000,
+                foreign_remaining_ratio=Decimal("3.86"),
+                foreign_upper_limit_ratio=Decimal("100.00"),
+                chinese_upper_limit_ratio=Decimal("30.00"),
             ),
         ]
 
@@ -250,16 +255,16 @@ class TestFactorRepository:
         assert result is not None
         assert result.expression == "Mean($close, 5)"
 
-    def test_get_active_excludes_excluded(self, session):
+    def test_get_enabled_excludes_disabled(self, session):
         repo = FactorRepository(session)
 
         repo.create(name="MA5", expression="Mean($close, 5)")
         factor2 = repo.create(name="MA10", expression="Mean($close, 10)")
-        repo.set_excluded(factor2.id, True)
+        repo.set_enabled(factor2.id, False)
 
-        active = repo.get_active()
-        assert len(active) == 1
-        assert active[0].name == "MA5"
+        enabled = repo.get_enabled()
+        assert len(enabled) == 1
+        assert enabled[0].name == "MA5"
 
 
 class TestTrainingRepository:
@@ -273,7 +278,7 @@ class TestTrainingRepository:
         factor = factor_repo.create(name="MA5", expression="Mean($close, 5)")
 
         # 建立訓練
-        run = training_repo.create_run(config={"model": "LGBModel"})
+        run = training_repo.create_run(name="202401-abc123")
         assert run.id is not None
         assert run.completed_at is None
 

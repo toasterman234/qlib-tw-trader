@@ -22,20 +22,15 @@ class TestDataStatus:
 
     def test_data_status_empty_db(self, client):
         """測試空資料庫的資料狀態"""
-        response = client.get("/api/v1/system/data-status?stock_id=2330")
+        response = client.get("/api/v1/system/data-status")
         assert response.status_code == 200
 
         data = response.json()
-        assert data["stock_id"] == "2330"
         assert "datasets" in data
         assert len(data["datasets"]) == 6
+        assert "stocks" in data
+        assert "checked_at" in data
 
         for dataset in data["datasets"]:
             assert dataset["latest_date"] is None
-            assert dataset["record_count"] == 0
-
-    def test_data_status_custom_stock(self, client):
-        """測試自訂股票代碼"""
-        response = client.get("/api/v1/system/data-status?stock_id=2317")
-        assert response.status_code == 200
-        assert response.json()["stock_id"] == "2317"
+            assert dataset["is_fresh"] is False
