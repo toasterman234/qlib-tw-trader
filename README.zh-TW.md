@@ -63,20 +63,9 @@
 
 ## 運作原理
 
-```
-T-1 收盤     T 開盤      T+2 收盤
-  |            |             |
-  計算特徵 --> 買入信號  -->  賣出    （2 天持有期）
-```
-
-**流程：**
-
-1. **資料擷取** — 從 TWSE/FinMind/yfinance 取得 OHLCV、PER/PBR、三大法人、融資融券、月營收
-2. **因子計算** — 約 300 個因子送入 Qlib：Alpha158 量價因子（109）、台股籌碼因子（107）、交互因子（50）、增強因子（37）
-3. **模型訓練** — DoubleEnsemble（ICDM 2020）：K 個 LightGBM 子模型搭配迭代式樣本加權 + 排列重要性特徵選擇。模型內建特徵選擇，無需預先篩選
-4. **Walk-Forward** — 每週重新訓練，504 天滾動訓練窗口、100 天驗證期、7 天 embargo
-5. **預測** — 每日對前 100 大股票進行截面排名，預測 2 天報酬
-6. **評估** — 多策略回測（TopK、TopKDrop、HoldDrop）、IC 分析、Regime 分解
+<p align="center">
+  <img src="docs/images/pipeline.svg" alt="交易流程" width="600">
+</p>
 
 ## 功能特色
 
@@ -136,28 +125,9 @@ curl -X POST http://localhost:8000/api/v1/factors/seed
 
 ## 系統架構
 
-```
-┌──────────────────────────────────────────────┐
-│              React Dashboard                  │
-│        Vite + TailwindCSS + Zustand           │
-└────────────────────┬─────────────────────────┘
-                     │ HTTP / WebSocket
-┌────────────────────▼─────────────────────────┐
-│              FastAPI Backend                   │
-│                                               │
-│  ┌───────────┐  ┌──────────────────────────┐  │
-│  │ Adapters  │  │ Services                 │  │
-│  │  TWSE     │  │  ModelTrainer            │  │
-│  │  FinMind  │  │  WalkForwardBacktester   │  │
-│  │  yfinance │  │  Predictor               │  │
-│  └─────┬─────┘  │  QlibExporter            │  │
-│        │        │  DoubleEnsemble          │  │
-│        │        └────────────┬─────────────┘  │
-│  ┌─────▼─────────────────────▼─────────────┐  │
-│  │   SQLite (WAL) + Qlib .bin exports      │  │
-│  └─────────────────────────────────────────┘  │
-└───────────────────────────────────────────────┘
-```
+<p align="center">
+  <img src="docs/images/architecture.svg" alt="系統架構" width="800">
+</p>
 
 ### 專案結構
 

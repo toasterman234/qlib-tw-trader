@@ -79,21 +79,9 @@ The model's ranking ability is strongest in bear markets where stock dispersion 
 
 ## How It Works
 
-```
-T-1 close     T open      T+2 close
-  |              |             |
-  features  -->  buy    -->   sell     (2-day holding period)
-  computed       signal       exit
-```
-
-**Pipeline:**
-
-1. **Data ingestion** -- OHLCV, PER/PBR, institutional trades, margin trading, monthly revenue from TWSE/FinMind/yfinance
-2. **Factor computation** -- ~300 factors fed to Qlib: Alpha158 price-volume (109), Taiwan institutional flow (107), cross-interaction (50), enhanced (37)
-3. **Model training** -- DoubleEnsemble (ICDM 2020): K LightGBM sub-models with iterative sample reweighting + permutation-based feature selection. The model handles feature selection internally -- no pre-filtering needed
-4. **Walk-Forward** -- Weekly retraining on a 504-day rolling window with 100-day validation and 7-day embargo
-5. **Prediction** -- Daily cross-sectional ranking of top-100 stocks by predicted 2-day return
-6. **Evaluation** -- Multi-strategy backtesting (TopK, TopKDrop, HoldDrop), IC analysis, regime decomposition
+<p align="center">
+  <img src="docs/images/pipeline.svg" alt="Trading Pipeline" width="600">
+</p>
 
 ## Features
 
@@ -153,28 +141,9 @@ curl -X POST http://localhost:8000/api/v1/factors/seed
 
 ## Architecture
 
-```
-┌──────────────────────────────────────────────┐
-│              React Dashboard                  │
-│        Vite + TailwindCSS + Zustand           │
-└────────────────────┬─────────────────────────┘
-                     │ HTTP / WebSocket
-┌────────────────────▼─────────────────────────┐
-│              FastAPI Backend                   │
-│                                               │
-│  ┌───────────┐  ┌──────────────────────────┐  │
-│  │ Adapters  │  │ Services                 │  │
-│  │  TWSE     │  │  ModelTrainer            │  │
-│  │  FinMind  │  │  WalkForwardBacktester   │  │
-│  │  yfinance │  │  Predictor               │  │
-│  └─────┬─────┘  │  QlibExporter            │  │
-│        │        │  DoubleEnsemble          │  │
-│        │        └────────────┬─────────────┘  │
-│  ┌─────▼─────────────────────▼─────────────┐  │
-│  │   SQLite (WAL) + Qlib .bin exports      │  │
-│  └─────────────────────────────────────────┘  │
-└───────────────────────────────────────────────┘
-```
+<p align="center">
+  <img src="docs/images/architecture.svg" alt="System Architecture" width="800">
+</p>
 
 ### Project Structure
 

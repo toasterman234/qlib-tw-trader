@@ -80,7 +80,7 @@ data/*.dvc
 
 # Personal research & docs (kept locally, not in git)
 reports/
-docs/
+docs/*.md
 CLAUDE.md
 
 # Script outputs

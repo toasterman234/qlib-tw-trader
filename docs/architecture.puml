@@ -1,0 +1,119 @@
+@startuml architecture
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "Segoe UI"
+skinparam defaultFontSize 13
+skinparam componentStyle rectangle
+skinparam roundCorner 8
+skinparam shadowing false
+skinparam ArrowColor #555555
+skinparam ArrowThickness 1.5
+
+skinparam component {
+  BackgroundColor #F8F9FA
+  BorderColor #DEE2E6
+  FontColor #212529
+}
+
+skinparam package {
+  BackgroundColor #FFFFFF
+  BorderColor #ADB5BD
+  FontColor #495057
+  FontStyle bold
+}
+
+skinparam database {
+  BackgroundColor #FFF3CD
+  BorderColor #FFCA2C
+}
+
+skinparam cloud {
+  BackgroundColor #E8F4FD
+  BorderColor #0D6EFD
+}
+
+title qlib-tw-trader Architecture
+
+package "Frontend" as FE #E3F2FD {
+  [React 18 Dashboard] as dashboard
+  [Recharts / LW Charts] as charts
+  [Zustand Store] as store
+  [WebSocket Client] as wsc
+
+  dashboard --> charts
+  dashboard --> store
+  dashboard --> wsc
+}
+
+package "Backend (FastAPI)" as BE #F1F8E9 {
+
+  package "Interfaces" as iface {
+    [REST API\n/api/v1/*] as api
+    [WebSocket\n/ws] as ws
+    [Schemas\n(Pydantic)] as schemas
+  }
+
+  package "Services" as svc {
+    [ModelTrainer\n+ Optuna] as trainer
+    [WalkForward\nBacktester] as wf
+    [Predictor] as pred
+    [QlibExporter] as qexp
+    [DoubleEnsemble\n(ICDM 2020)] as de
+    [SyncService] as sync
+  }
+
+  package "Repositories" as repo {
+    [Factor Definitions\n~300 factors] as factors
+    [Data Access\n(SQLAlchemy)] as dal
+  }
+
+  package "Adapters" as adapt {
+    [TWSE\nOpenAPI] as twse
+    [FinMind\nAPI] as fm
+    [yfinance] as yf
+  }
+
+  api --> trainer
+  api --> wf
+  api --> pred
+  api --> sync
+  ws --> wsc
+
+  trainer --> de
+  trainer --> qexp
+  wf --> de
+  wf --> qexp
+  pred --> de
+
+  sync --> twse
+  sync --> fm
+  sync --> yf
+
+  trainer --> dal
+  wf --> dal
+  pred --> dal
+  sync --> dal
+  qexp --> dal
+
+  dal --> factors
+}
+
+database "SQLite\n(WAL mode)" as db
+database "Qlib .bin\nexports" as qlib
+
+dal --> db
+qexp --> qlib
+de ..> qlib : reads features
+
+cloud "TWSE" as c_twse
+cloud "FinMind" as c_fm
+cloud "Yahoo" as c_yf
+
+twse --> c_twse
+fm --> c_fm
+yf --> c_yf
+
+dashboard --> api : HTTP
+store --> api : HTTP
+
+@enduml
