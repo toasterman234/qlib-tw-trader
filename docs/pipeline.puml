@@ -2,11 +2,11 @@
 !theme plain
 skinparam backgroundColor #FFFFFF
 skinparam defaultFontName "Segoe UI"
-skinparam defaultFontSize 12
+skinparam defaultFontSize 14
 skinparam shadowing false
+skinparam roundCorner 8
 skinparam ArrowColor #555555
 skinparam ArrowThickness 1.5
-skinparam roundCorner 8
 
 skinparam activity {
   BackgroundColor #F8F9FA
@@ -16,47 +16,41 @@ skinparam activity {
   DiamondBorderColor #FFCA2C
 }
 
-title Trading Pipeline — Lookahead Bias Prevention
+title Trading Pipeline
 
-|#E3F2FD| Data Layer |
 start
-:Sync from TWSE / FinMind / yfinance;
-note right
-  OHLCV, PER/PBR,
-  institutional trades,
-  margin, monthly revenue
-end note
-:Store in SQLite (WAL);
 
-|#F1F8E9| Feature Layer |
-:QlibExporter → .bin files;
-:Compute ~300 factors
-(Alpha158 + Taiwan chips
-+ interaction + enhanced);
+partition "**Data**" #E3F2FD {
+  :Sync TWSE / FinMind / yfinance
+  (OHLCV, PER/PBR, institutional, margin, revenue);
+  :Store in **SQLite** (WAL mode);
+}
 
-|#FFF3E0| Training Layer |
-:Walk-Forward window
-(504d train / 100d valid / 7d embargo);
-:DoubleEnsemble training
-(K=3 LightGBM sub-models
-+ sample reweighting
-+ feature selection);
-:Save model to data/models/;
+partition "**Features**" #F1F8E9 {
+  :QlibExporter → .bin files;
+  :Compute **~300 factors**
+  Alpha158 (109) + Taiwan chips (107)
+  + interaction (50) + enhanced (37);
+}
 
-|#F3E5F5| Prediction Layer |
-:Load T-1 features
-(strict: no T-day data);
-:Cross-sectional ranking
-of top-100 stocks;
-:Generate Top-K signals;
+partition "**Training**" #FFF3E0 {
+  :Walk-Forward: **504d train** / 100d valid / 7d embargo;
+  :DoubleEnsemble (K=3 LightGBM)
+  + sample reweighting + feature selection;
+}
 
-|#E8F5E9| Evaluation Layer |
-:Multi-strategy backtesting
-(TopK / TopKDrop / HoldDrop);
-:IC analysis
-(multi-horizon, rolling, regime);
-:Report metrics
-(Sharpe, MaxDD, excess, t-stat);
+partition "**Prediction**" #F3E5F5 {
+  :Load **T-1 features** (no T-day data);
+  :Cross-sectional ranking → Top-K signals
+  Label: close[T+3] / close[T+1] - 1;
+}
+
+partition "**Evaluation**" #E8F5E9 {
+  :Backtest: TopK / TopKDrop / HoldDrop;
+  :IC analysis + regime decomposition;
+  :Sharpe, MaxDD, excess return, t-stat;
+}
+
 stop
 
 @enduml
