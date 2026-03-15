@@ -244,12 +244,21 @@ Interactive documentation at http://localhost:8000/docs when running.
 
 ## References
 
-- Chuheng Zhang et al. **"DoubleEnsemble: A New Ensemble Method Based on Sample Reweighting and Feature Selection for Financial Data Analysis."** ICDM 2020. [[paper]](https://arxiv.org/abs/2010.01265)
-- Lin Yang et al. **"Qlib: An AI-oriented Quantitative Investment Platform."** 2020. [[repo]](https://github.com/microsoft/qlib)
-- Guolin Ke et al. **"LightGBM: A Highly Efficient Gradient Boosting Decision Tree."** NeurIPS 2017. [[paper]](https://papers.nips.cc/paper/2017/hash/6449f44a102fde848669bdd9eb6b76fa-Abstract.html)
-- Takuya Akiba et al. **"Optuna: A Next-generation Hyperparameter Optimization Framework."** KDD 2019. [[paper]](https://arxiv.org/abs/1907.10902)
-- Mebane Faber. **"A Quantitative Approach to Tactical Asset Allocation."** Journal of Wealth Management, 2007. [[paper]](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=962461)
-- Campbell Harvey, Yan Liu, Heqing Zhu. **"...and the Cross-Section of Expected Returns."** Review of Financial Studies, 2016. [[paper]](https://doi.org/10.1093/rfs/hhv059)
+**Core Model:**
+- Zhang et al. **"DoubleEnsemble: A New Ensemble Method Based on Sample Reweighting and Feature Selection for Financial Data Analysis."** ICDM 2020. [[paper]](https://arxiv.org/abs/2010.01265)
+- Ke et al. **"LightGBM: A Highly Efficient Gradient Boosting Decision Tree."** NeurIPS 2017. [[paper]](https://papers.nips.cc/paper/2017/hash/6449f44a102fde848669bdd9eb6b76fa-Abstract.html)
+- Akiba et al. **"Optuna: A Next-generation Hyperparameter Optimization Framework."** KDD 2019. [[paper]](https://arxiv.org/abs/1907.10902)
+
+**Quantitative Finance:**
+- Gu, Kelly & Xiu. **"Empirical Asset Pricing via Machine Learning."** Review of Financial Studies, 2020. [[paper]](https://doi.org/10.1093/rfs/hhaa009)
+- Grinold & Kahn. **"Active Portfolio Management."** McGraw-Hill, 1999.
+- Harvey, Liu & Zhu. **"...and the Cross-Section of Expected Returns."** Review of Financial Studies, 2016. [[paper]](https://doi.org/10.1093/rfs/hhv059)
+- Novy-Marx & Velikov. **"A Taxonomy of Anomalies and Their Trading Costs."** Review of Financial Studies, 2016. [[paper]](https://doi.org/10.1093/rfs/hhv063)
+- Faber. **"A Quantitative Approach to Tactical Asset Allocation."** Journal of Wealth Management, 2007. [[paper]](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=962461)
+
+**Platform:**
+- Yang et al. **"Qlib: An AI-oriented Quantitative Investment Platform."** 2020. [[repo]](https://github.com/microsoft/qlib)
+- Lopez de Prado. **"Advances in Financial Machine Learning."** Wiley, 2018. [[book]](https://www.wiley.com/en-us/Advances+in+Financial+Machine+Learning-p-9781119482086)
 
 ## Contributing
 
