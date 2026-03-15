@@ -1,29 +1,47 @@
 [English](README.md) | [繁體中文](README.zh-TW.md)
 
-# qlib-tw-trader
+<h1 align="center">qlib-tw-trader</h1>
 
-![Python](https://img.shields.io/badge/Python-3.12+-3776AB?logo=python&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
-![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)
-![Qlib](https://img.shields.io/badge/Qlib-Microsoft-0078D4)
-![LightGBM](https://img.shields.io/badge/LightGBM-DoubleEnsemble-9ACD32)
-![License](https://img.shields.io/badge/License-MIT-green)
+<p align="center">
+  <strong>End-to-end quantitative trading system for Taiwan stocks</strong>
+</p>
 
-A research-grade quantitative trading platform for Taiwan's top-100 market-cap stocks, covering the full pipeline from data ingestion to model evaluation.
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.12+-3776AB?logo=python&logoColor=white" alt="Python">
+  <img src="https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white" alt="FastAPI">
+  <img src="https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black" alt="React">
+  <img src="https://img.shields.io/badge/Qlib-Microsoft-0078D4" alt="Qlib">
+  <img src="https://img.shields.io/badge/LightGBM-DoubleEnsemble-9ACD32" alt="LightGBM">
+  <img src="https://img.shields.io/badge/License-MIT-green" alt="License">
+</p>
 
-<!-- TODO: Add dashboard screenshot -->
-<!-- ![Dashboard](docs/images/dashboard.png) -->
+<p align="center">
+  <img src="docs/images/screenshots/dashboard.png" alt="Dashboard" width="800">
+</p>
+
+## What is qlib-tw-trader?
+
+qlib-tw-trader is a full-stack quantitative trading research platform built for Taiwan's stock market. It automates the entire workflow that a quantitative researcher would do manually:
+
+1. **Collect data** from official Taiwan Stock Exchange (TWSE), FinMind, and Yahoo Finance
+2. **Compute ~300 alpha factors** including price-volume patterns, institutional order flow, and cross-asset interactions
+3. **Train ML models** using DoubleEnsemble (ICDM 2020) -- an iterative ensemble that automatically selects useful features and reweights difficult samples
+4. **Backtest strategies** with a rigorous 156-week Walk-Forward framework where each week's model is trained only on past data
+5. **Generate daily signals** ranking Taiwan's top-100 stocks by predicted 2-day return
+6. **Monitor everything** through a React dashboard with real-time WebSocket updates
+
+The system is designed with **strict lookahead bias prevention**: trades on day T use only features available at T-1 close, with a 7-day embargo between training and validation sets. This is not a toy backtest -- it's a research tool built to produce results you can trust.
 
 ## Walk-Forward Backtest Results
 
-All results are **out-of-sample**, from a 156-week (3-year) Walk-Forward backtest with weekly model retraining. No lookahead bias -- T-day trades use only T-1 features.
+All results are **out-of-sample**, from a 156-week (3-year) Walk-Forward backtest with weekly model retraining.
 
 ### LightGBM vs DoubleEnsemble
 
 | Metric | LightGBM | DoubleEnsemble | Change |
 |--------|:--------:|:--------------:|:------:|
 | Backtest IC | 0.0107 | **0.0166** | +55% |
-| IC Decay (valid -> backtest) | 78.5% | **56.0%** | -23pp |
+| IC Decay (valid → backtest) | 78.5% | **56.0%** | -23pp |
 | Best Strategy Sharpe | 1.006 | **1.724** | +71% |
 | Best Excess Return | +0.2% | **+23.9%** | |
 | Quantile Monotonicity (rho) | 0.90 | **1.00** | Perfect |
@@ -31,17 +49,14 @@ All results are **out-of-sample**, from a 156-week (3-year) Walk-Forward backtes
 
 ### Best Strategy: HoldDrop(K=10, H=3, D=1)
 
-| Metric | Value |
-|--------|:-----:|
-| Annualized Return | 55.1% |
-| Annualized Excess | +23.9% |
-| Sharpe Ratio | 1.724 |
-| Max Drawdown | 38.7% |
-| Turnover | 9.9%/week |
-| t-stat | 1.89 |
+| Metric | Value | Metric | Value |
+|--------|:-----:|--------|:-----:|
+| Ann. Return | 55.1% | Ann. Excess | +23.9% |
+| Sharpe | 1.724 | Max Drawdown | 38.7% |
+| Turnover | 9.9%/week | t-stat | 1.89 |
 
 <details>
-<summary>Yearly breakdown</summary>
+<summary><strong>Yearly breakdown</strong></summary>
 
 | Year | Excess | Sharpe | Win Rate | MaxDD |
 |:----:|:------:|:------:|:--------:|:-----:|
@@ -52,7 +67,20 @@ All results are **out-of-sample**, from a 156-week (3-year) Walk-Forward backtes
 </details>
 
 <details>
-<summary>Comparison with Qlib official benchmarks</summary>
+<summary><strong>Market regime analysis</strong></summary>
+
+| Regime | Mean IC | Excess (bps/day) | Win Rate |
+|:------:|:-------:|:-----------------:|:--------:|
+| Bear | **0.0354** | +10.0 | **55.2%** |
+| Sideways | 0.0146 | **+13.4** | 50.0% |
+| Bull | -0.0002 | +1.8 | 50.2% |
+
+The model's ranking ability is strongest in bear markets where stock dispersion is high.
+
+</details>
+
+<details>
+<summary><strong>Comparison with Qlib official benchmarks</strong></summary>
 
 Our IC/ICIR is lower than [Qlib CSI300 benchmarks](https://github.com/microsoft/qlib/tree/main/examples/benchmarks) (IC 0.052, ICIR 0.42), but **Sharpe is higher** (1.72 vs 1.34). This reflects structural differences:
 
@@ -63,19 +91,41 @@ Our IC/ICIR is lower than [Qlib CSI300 benchmarks](https://github.com/microsoft/
 | Holding | top-50 | top-10 (concentrated) |
 | Label | 1-day return | 2-day return |
 
-Direct IC comparison is not meaningful across these conditions. The relevant comparison is the **relative improvement** from LightGBM to DoubleEnsemble within the same setup.
+Direct IC comparison is not meaningful across these conditions. The relevant metric is the **relative improvement** from LightGBM → DoubleEnsemble within the same setup.
 
 </details>
 
-### Market Regime Performance
+## Screenshots
 
-| Regime | Mean IC | Excess (bps/day) | Win Rate |
-|:------:|:-------:|:-----------------:|:--------:|
-| Bear | **0.0354** | +10.0 | **55.2%** |
-| Sideways | 0.0146 | **+13.4** | 50.0% |
-| Bull | -0.0002 | +1.8 | 50.2% |
+<details>
+<summary><strong>Model Training -- Week calendar with 162 trained models</strong></summary>
+<img src="docs/images/screenshots/training.png" alt="Training" width="800">
+</details>
 
-The model's ranking ability is strongest in bear markets where stock dispersion is high.
+<details>
+<summary><strong>Model Evaluation -- Rolling IC, cumulative returns, strategy performance</strong></summary>
+<img src="docs/images/screenshots/evaluation.png" alt="Evaluation" width="800">
+</details>
+
+<details>
+<summary><strong>Factor Management -- 266 factors with selection rates and formulas</strong></summary>
+<img src="docs/images/screenshots/factors.png" alt="Factors" width="800">
+</details>
+
+<details>
+<summary><strong>Walk-Forward Backtest -- Week selection, IC analysis, equity curves</strong></summary>
+<img src="docs/images/screenshots/backtest.png" alt="Backtest" width="800">
+</details>
+
+<details>
+<summary><strong>Training Quality -- Jaccard similarity, IC stability, ICIR tracking</strong></summary>
+<img src="docs/images/screenshots/quality.png" alt="Quality" width="800">
+</details>
+
+<details>
+<summary><strong>Datasets -- Multi-source data coverage and sync status</strong></summary>
+<img src="docs/images/screenshots/datasets.png" alt="Datasets" width="800">
+</details>
 
 ## How It Works
 
@@ -86,12 +136,12 @@ The model's ranking ability is strongest in bear markets where stock dispersion 
 ## Features
 
 - **DoubleEnsemble (ICDM 2020)** -- Iterative ensemble with built-in sample reweighting and feature selection. +55% IC over single LightGBM. [[paper]](https://arxiv.org/abs/2010.01265)
-- **~300 factor library** -- Alpha158 OHLCV factors, Taiwan institutional flow (foreign/trust/dealer net buy, margin), cross-interaction terms, and enhanced factors (volatility regime, momentum, liquidity, microstructure)
-- **Walk-Forward backtesting** -- 156-week out-of-sample test with IC Decay analysis, quantile spread, and multi-strategy comparison
-- **Strict lookahead bias prevention** -- T-day trades use T-1 features only. 7-day embargo between train/validation sets. Tie-breaking by stock symbol for reproducibility
-- **Multi-source data sync** -- Auto-sync from TWSE OpenAPI, FinMind, and yfinance with priority fallback
-- **Full-stack dashboard** -- React 18 + WebSocket real-time updates, model evaluation charts, position tracking, factor management
-- **Optuna hyperparameter search** -- Bayesian optimization over model parameters
+- **~300 factor library** -- Alpha158 OHLCV factors (109), Taiwan institutional flow (107), cross-interaction terms (50), and enhanced factors (37) covering volatility regime, momentum, liquidity, and microstructure
+- **Walk-Forward backtesting** -- 156-week out-of-sample test with IC Decay analysis, quantile spread, and multi-strategy comparison across 9 strategy variants
+- **Strict lookahead bias prevention** -- T-day trades use T-1 features only. 7-day embargo between train/validation sets. Deterministic tie-breaking by stock symbol
+- **Multi-source data sync** -- Auto-sync from TWSE OpenAPI, FinMind, and yfinance with priority fallback and coverage tracking
+- **Full-stack dashboard** -- 9 pages: Dashboard, Factors, Training, Evaluation, Backtest, Quality, Predictions, Positions, Datasets
+- **Optuna hyperparameter search** -- Bayesian optimization over DoubleEnsemble parameters
 
 ## Tech Stack
 
@@ -145,7 +195,8 @@ curl -X POST http://localhost:8000/api/v1/factors/seed
   <img src="docs/images/architecture.svg" alt="System Architecture" width="800">
 </p>
 
-### Project Structure
+<details>
+<summary><strong>Project structure</strong></summary>
 
 ```
 qlib-tw-trader/
@@ -155,31 +206,20 @@ qlib-tw-trader/
 │   ├── repositories/       # Database access + factor definitions (~300)
 │   ├── services/           # Training, prediction, backtesting, Qlib export
 │   └── shared/             # Constants, types, week utilities
-├── frontend/               # React 18 SPA
+├── frontend/               # React 18 SPA (9 pages)
 ├── tests/                  # pytest suite (28 tests)
 ├── scripts/                # Analysis scripts (model eval, timing, IC)
 └── data/                   # Database + models + Qlib exports (gitignored)
 ```
 
-## Dashboard Pages
-
-| Page | Description |
-|------|-------------|
-| **Dashboard** | System overview, model stats, quick actions |
-| **Factors** | Factor library CRUD, enable/disable, deduplication |
-| **Training** | Week calendar, batch training, model management |
-| **Evaluation** | Aggregate IC analysis, equity curves, factor importance, CSV/JSON export |
-| **Backtest** | Walk-Forward results, per-week IC, strategy comparison |
-| **Quality** | IC stability monitoring, Jaccard similarity, ICIR tracking |
-| **Predictions** | Today's signals, Top-K stock picks |
-| **Positions** | Current holdings, trade history, holdings timeline |
-| **Datasets** | Data source coverage, sync status, freshness checks |
+</details>
 
 ## API
 
 Interactive documentation at http://localhost:8000/docs when running.
 
-Key endpoints:
+<details>
+<summary><strong>Key endpoints</strong></summary>
 
 | Endpoint | Description |
 |----------|-------------|
@@ -192,6 +232,8 @@ Key endpoints:
 | `GET /api/v1/predictions/today` | Get current stock picks |
 | `GET /api/v1/predictions/history` | Prediction history |
 
+</details>
+
 ## Data Sources
 
 | Priority | Source | Coverage |
@@ -202,9 +244,12 @@ Key endpoints:
 
 ## References
 
-- **DoubleEnsemble**: Chuheng Zhang et al. "DoubleEnsemble: A New Ensemble Method Based on Sample Reweighting and Feature Selection for Financial Data Analysis." ICDM 2020. [[paper]](https://arxiv.org/abs/2010.01265)
-- **Qlib**: Yang et al. "Qlib: An AI-oriented Quantitative Investment Platform." 2020. [[repo]](https://github.com/microsoft/qlib)
-- **Alpha158**: Qlib built-in factor set. [[docs]](https://qlib.readthedocs.io/en/latest/component/data.html)
+- Chuheng Zhang et al. **"DoubleEnsemble: A New Ensemble Method Based on Sample Reweighting and Feature Selection for Financial Data Analysis."** ICDM 2020. [[paper]](https://arxiv.org/abs/2010.01265)
+- Lin Yang et al. **"Qlib: An AI-oriented Quantitative Investment Platform."** 2020. [[repo]](https://github.com/microsoft/qlib)
+- Guolin Ke et al. **"LightGBM: A Highly Efficient Gradient Boosting Decision Tree."** NeurIPS 2017. [[paper]](https://papers.nips.cc/paper/2017/hash/6449f44a102fde848669bdd9eb6b76fa-Abstract.html)
+- Takuya Akiba et al. **"Optuna: A Next-generation Hyperparameter Optimization Framework."** KDD 2019. [[paper]](https://arxiv.org/abs/1907.10902)
+- Mebane Faber. **"A Quantitative Approach to Tactical Asset Allocation."** Journal of Wealth Management, 2007. [[paper]](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=962461)
+- Campbell Harvey, Yan Liu, Heqing Zhu. **"...and the Cross-Section of Expected Returns."** Review of Financial Studies, 2016. [[paper]](https://doi.org/10.1093/rfs/hhv059)
 
 ## Contributing
 
