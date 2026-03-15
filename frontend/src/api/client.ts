@@ -392,6 +392,24 @@ export interface TodayPredictionStatus {
   message: string | null
 }
 
+export interface PredictionHistoryItem {
+  trade_date: string
+  feature_date: string
+  model_name: string
+  model_week: string
+  is_fallback: boolean
+  is_incremental: boolean
+  incremental_days: number | null
+  signal_count: number
+  top_picks: PredictionSignal[]
+  created_at: string | null
+}
+
+export interface PredictionHistoryResponse {
+  items: PredictionHistoryItem[]
+  total: number
+}
+
 export const portfolioApi = {
   generatePredictions: (data: PredictionRequest) =>
     api.post<PredictionsResponse>('/predictions/generate', data),
@@ -399,6 +417,10 @@ export const portfolioApi = {
     api.get<TodayPredictionStatus>('/predictions/today'),
   generateToday: () =>
     api.post<{ job_id: string; status: string }>('/predictions/today/generate', {}),
+  history: (limit?: number) => {
+    const query = limit ? `?limit=${limit}` : ''
+    return api.get<PredictionHistoryResponse>(`/predictions/history${query}`)
+  },
 }
 
 // Dashboard Types
@@ -956,6 +978,39 @@ export interface WalkForwardListResponse {
   total: number
 }
 
+export interface WeeklySummaryPoint {
+  predict_week: string
+  live_ic: number | null
+  week_return: number | null
+  market_return: number | null
+  cumulative_return: number | null
+  cumulative_market: number | null
+}
+
+export interface WalkForwardSummary {
+  backtest_id: number
+  start_week_id: string
+  end_week_id: string
+  config: WalkForwardConfig
+  total_weeks: number
+  mean_ic: number
+  icir: number
+  ic_positive_rate: number
+  annualized_return: number | null
+  annualized_excess: number | null
+  cumulative_return: number
+  market_return: number
+  excess_return: number
+  sharpe_ratio: number | null
+  max_drawdown: number | null
+  win_rate: number | null
+  total_trades: number | null
+  weekly_points: WeeklySummaryPoint[]
+  equity_curve: EquityCurvePoint[]
+  created_at: string
+  completed_at: string | null
+}
+
 export const walkForwardApi = {
   availableWeeks: () => api.get<AvailableWeeksResponse>('/backtest/walk-forward/available-weeks'),
   list: (limit?: number) => {
@@ -963,6 +1018,10 @@ export const walkForwardApi = {
     return api.get<WalkForwardListResponse>(`/backtest/walk-forward${query}`)
   },
   get: (backtestId: number) => api.get<WalkForwardDetail>(`/backtest/walk-forward/${backtestId}`),
+  summary: (backtestId?: number) => {
+    const query = backtestId ? `?backtest_id=${backtestId}` : ''
+    return api.get<WalkForwardSummary>(`/backtest/walk-forward/summary${query}`)
+  },
   run: (data: WalkForwardRequest) => api.post<WalkForwardRunResponse>('/backtest/walk-forward', data),
   delete: (backtestId: number) => api.delete(`/backtest/walk-forward/${backtestId}`),
 }

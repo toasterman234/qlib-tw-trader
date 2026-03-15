@@ -107,6 +107,26 @@ class WalkForwardBacktestRepository:
         self._session.refresh(backtest)
         return backtest
 
+    def get_latest_completed(self) -> WalkForwardBacktest | None:
+        """取得最新完成的回測記錄"""
+        stmt = (
+            select(WalkForwardBacktest)
+            .where(WalkForwardBacktest.status == "completed")
+            .order_by(WalkForwardBacktest.completed_at.desc())
+            .limit(1)
+        )
+        return self._session.execute(stmt).scalar_one_or_none()
+
+    def get_all_completed(self, limit: int = 50) -> list[WalkForwardBacktest]:
+        """取得所有完成的回測記錄"""
+        stmt = (
+            select(WalkForwardBacktest)
+            .where(WalkForwardBacktest.status == "completed")
+            .order_by(WalkForwardBacktest.completed_at.desc())
+            .limit(limit)
+        )
+        return list(self._session.execute(stmt).scalars().all())
+
     def delete(self, backtest_id: int) -> bool:
         """刪除回測記錄"""
         backtest = self.get(backtest_id)

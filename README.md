@@ -1,106 +1,194 @@
+[English](README.md) | [繁體中文](README.zh-TW.md)
+
 # qlib-tw-trader
 
-台灣股票預測系統，基於 Microsoft qlib + LightGBM。
+![Python](https://img.shields.io/badge/Python-3.12+-3776AB?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
+![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)
+![Qlib](https://img.shields.io/badge/Qlib-Microsoft-0078D4)
+![LightGBM](https://img.shields.io/badge/LightGBM-DoubleEnsemble-9ACD32)
+![License](https://img.shields.io/badge/License-MIT-green)
 
-## 功能特色
+> Quantitative trading system for Taiwan stocks -- DoubleEnsemble model, 300+ factors, Walk-Forward backtesting, and a full-stack dashboard.
 
-| 功能 | 說明 |
-|------|------|
-| **資料同步** | 9 種資料集，自動抓取 TWSE/FinMind/yfinance |
-| **因子管理** | 263 個預設因子（Alpha158 + 籌碼 + 交互），支援 CRUD |
-| **模型訓練** | Optuna 自動調參 + IC 去重複 + CSRankNorm |
-| **Walk-Forward 回測** | 多模型滾動驗證，計算 IC Decay |
-| **即時更新** | WebSocket + Zustand，CRUD 後自動刷新 UI |
-| **預測推薦** | 選擇模型 + 日期，產生 Top-K 股票推薦 |
+A research-grade quantitative trading platform targeting Taiwan's top-100 market-cap stocks. It handles the full pipeline: data ingestion from TWSE/FinMind/yfinance, factor engineering (~300 factors), model training with Optuna hyperparameter search, 156-week Walk-Forward backtesting, and a React dashboard for monitoring -- all with strict lookahead bias prevention.
 
-## 技術棧
+<!-- TODO: Add screenshot of dashboard -->
+<!-- ![Dashboard Screenshot](docs/images/dashboard.png) -->
 
-| 層級 | 技術 |
-|------|------|
-| 後端 | FastAPI + SQLAlchemy + SQLite |
-| 前端 | React 18 + Vite + Tailwind |
-| 預測 | qlib + LightGBM + Optuna |
-| 回測 | backtrader |
-| 資料版本 | DVC + Google Drive |
+## Key Results (156-Week Walk-Forward)
 
-## 快速開始
+| Metric | LightGBM | DoubleEnsemble | Improvement |
+|--------|----------|----------------|-------------|
+| **IC** | 0.0107 | 0.0166 | +55% |
+| **IC Decay** | 78.5% | 56.0% | -23pp |
+| **Best Strategy Sharpe** | 1.006 | 1.724 | +71% |
+| **Signal Monotonicity** | 0.90 | 1.00 | Perfect |
 
-### 安裝
+## Features
+
+- **DoubleEnsemble model (ICDM 2020)** -- Iterative ensemble of K LightGBM sub-models with sample reweighting and feature selection. +55% IC and +71% Sharpe over single LightGBM.
+- **~300 factor library** -- Alpha158 price-volume (109), Taiwan institutional flow (107), cross-interaction (50), and enhanced factors (37) covering volatility regime, momentum, liquidity, valuation, and microstructure.
+- **Walk-Forward backtesting** -- 156-week rolling window with per-week model retraining, IC Decay analysis, and multi-strategy comparison.
+- **IC incremental selection** -- Stepwise factor addition with deduplication (0.99 threshold) to select 30-50 effective factors from ~300 candidates.
+- **Lookahead bias prevention** -- Trade on T uses T-1 features only. Label defined as 2-day forward return with 7-day embargo between train and validation sets.
+- **9 data sources** -- Auto-sync OHLCV, adjusted close, PER/PBR, institutional trades, margin trading, and monthly revenue from TWSE, FinMind, and yfinance.
+- **Full-stack dashboard** -- React 18 + Vite + TailwindCSS with WebSocket real-time updates, equity curve charts, and week calendar navigation.
+- **Optuna hyperparameter search** -- Bayesian optimization over DoubleEnsemble parameters (50 trials per training run).
+
+## Tech Stack
+
+| Layer | Technologies |
+|-------|-------------|
+| **Backend** | FastAPI, SQLAlchemy 2.0, SQLite (WAL mode) |
+| **Frontend** | React 18, Vite, TailwindCSS, Zustand, Recharts, Lightweight Charts |
+| **Model** | Qlib (Microsoft), LightGBM, DoubleEnsemble (ICDM 2020), Optuna |
+| **Backtesting** | backtrader |
+| **Data** | TWSE OpenAPI, FinMind, yfinance, DVC + Google Drive |
+| **Real-time** | WebSocket |
+
+## Quick Start with Docker
+
+The fastest way to get running:
 
 ```bash
-# 後端
-pip install -r requirements.txt
+# Clone the repository
+git clone https://github.com/your-username/qlib-tw-trader.git
+cd qlib-tw-trader
 
-# 前端
-cd frontend && npm install
+# Configure environment
+cp .env.example .env
+# Edit .env with your FinMind API token (optional)
+
+# Start all services
+docker compose up --build
 ```
 
-### 下載資料（DVC）
+- Backend API: http://localhost:8000
+- Frontend: http://localhost:3000
+- Swagger docs: http://localhost:8000/docs
+
+> **Note**: The SQLite database (`data/data.db`) and trained models (`data/models/`) are mounted as volumes. If you have pre-existing data via DVC, place them in the `data/` directory before starting.
+
+## Manual Setup
+
+### Prerequisites
+
+- Python 3.12+
+- Node.js 20+
+- Git
+
+### Backend
 
 ```bash
-# 需要先安裝 Google Drive Desktop 並登入
+# Create virtual environment
+python -m venv .venv
+source .venv/bin/activate  # Linux/macOS
+# .venv\Scripts\activate   # Windows
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Configure environment
+cp .env.example .env
+
+# Start the server
+uvicorn src.interfaces.app:app --reload --port 8000
+```
+
+### Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+The frontend dev server runs at http://localhost:5173 and proxies API requests to the backend.
+
+### Download Pre-built Data (Optional)
+
+If you have Google Drive Desktop configured:
+
+```bash
 python -m dvc pull
 ```
 
-### 啟動
-
-```bash
-# 後端 (port 8000)
-uvicorn src.interfaces.app:app --reload --port 8000
-
-# 前端 (port 5173)
-cd frontend && npm run dev
-```
-
-### 初始化因子
+### Initialize Factors
 
 ```bash
 curl -X POST http://localhost:8000/api/v1/factors/seed
 ```
 
-## API 文檔
+## Architecture
 
-- Swagger: http://localhost:8000/docs
-- ReDoc: http://localhost:8000/redoc
+```
+                    ┌──────────────────────────────────────────┐
+                    │             React Dashboard               │
+                    │          Vite + TailwindCSS + Zustand     │
+                    └─────────────────┬────────────────────────┘
+                                      │ HTTP / WebSocket
+                    ┌─────────────────▼────────────────────────┐
+                    │             FastAPI Backend                │
+                    │                                           │
+                    │  ┌───────────┐  ┌──────────────────────┐  │
+                    │  │ Adapters  │  │ Services             │  │
+                    │  │  TWSE     │  │  Model Trainer       │  │
+                    │  │  FinMind  │  │  Predictor           │  │
+                    │  │  yfinance │  │  Walk-Forward Tester │  │
+                    │  └─────┬─────┘  │  Factor Selection    │  │
+                    │        │        │  Qlib Exporter       │  │
+                    │        │        └──────────┬───────────┘  │
+                    │  ┌─────▼───────────────────▼───────────┐  │
+                    │  │  SQLite (WAL) + Qlib .bin exports   │  │
+                    │  └────────────────────────────────────┘  │
+                    └──────────────────────────────────────────┘
+```
 
-## 專案狀態
+### Project Structure
 
-### 已完成
+```
+qlib-tw-trader/
+├── src/
+│   ├── adapters/           # External data source clients
+│   ├── flows/              # Orchestration workflows
+│   ├── interfaces/         # FastAPI routes, schemas, WebSocket
+│   ├── repositories/       # Database access and factor definitions
+│   ├── services/           # Business logic (training, prediction, backtesting)
+│   └── shared/             # Shared types and utilities
+├── frontend/               # React SPA
+├── tests/                  # pytest test suite
+├── scripts/                # Reproducible analysis scripts
+├── data/                   # Database, models, qlib exports (gitignored)
+└── docker-compose.yml      # Container orchestration
+```
 
-- [x] 資料同步（9 種資料集，TWSE/FinMind/yfinance）
-- [x] Qlib 導出器（30 個欄位，PIT 月營收）
-- [x] 因子管理（263 個預設因子，CRUD，驗證，去重複）
-- [x] 前端 UI（8 個頁面）
-- [x] 模型訓練（LightGBM，IC 增量選擇，Optuna 自動調參）
-- [x] 即時更新（WebSocket + Zustand，CRUD 後自動刷新）
-- [x] 回測系統（backtrader 整合，Equity Curve，績效指標，K-line 圖表）
-- [x] Walk-Forward 回測（多模型滾動驗證，IC Decay 分析）
-- [x] 預測推薦（選擇模型 + 日期，產生 Top-K 股票推薦）
+## API Documentation
 
-### 待完成
+Interactive API documentation is available when the backend is running:
 
-- [ ] 增量學習（每日微調模型權重）
-- [ ] 排程系統（每日自動同步+訓練）
+- **Swagger UI**: http://localhost:8000/docs
+- **ReDoc**: http://localhost:8000/redoc
 
-## 資料來源
+## Data Sources
 
-| 優先序 | 來源 | 說明 |
-|--------|------|------|
-| 1 | TWSE RWD | 官方資料，當日 17:30 後可用 |
-| 2 | FinMind | 第三方整合，600次/時限制 |
-| 3 | yfinance | 還原股價 |
+| Priority | Source | Notes |
+|----------|--------|-------|
+| 1 | TWSE OpenAPI | Official exchange data, available after 17:30 daily |
+| 2 | FinMind | Third-party aggregator, 600 requests/hour (free tier) |
+| 3 | yfinance | Adjusted close prices, no rate limit |
 
-## 文檔導覽
+## Roadmap
 
-| 文檔 | 說明 |
-|------|------|
-| [API 設計](docs/api-design.md) | API 端點參考 |
-| [訓練系統](docs/training-system.md) | 訓練流程、IC 計算、參數配置 |
-| [資料集](docs/datasets.md) | 資料來源與更新時間 |
-| [原始欄位](docs/raw-fields.md) | 30 個 Qlib 欄位定義 |
-| [增量學習設計](docs/incremental-learning-design.md) | 未實現功能的設計文檔 |
-| [模型績效分析](reports/model-performance-analysis.md) | 156 週 Walk-Forward 回測分析 |
+- [ ] Incremental learning -- daily model weight fine-tuning
+- [ ] Scheduler -- automated daily sync + training pipeline
+- [ ] Dynamic strategy parameters -- adaptive TopK and holding periods
+- [ ] Multi-market support -- extend beyond Taiwan stocks
 
-## 授權
+## Contributing
 
-私人專案
+Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for setup instructions, coding standards, and the development workflow.
+
+## License
+
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.

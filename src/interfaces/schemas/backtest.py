@@ -126,3 +126,49 @@ class WalkForwardListResponse(BaseModel):
 
     items: list[WalkForwardResponse]
     total: int
+
+
+class WeeklySummaryPoint(BaseModel):
+    """每週摘要資料點（用於 rolling IC 與累積報酬圖表）"""
+
+    predict_week: str
+    live_ic: float | None = None
+    week_return: float | None = None
+    market_return: float | None = None
+    cumulative_return: float | None = None
+    cumulative_market: float | None = None
+
+
+class WalkForwardSummaryResponse(BaseModel):
+    """Walk-Forward 回測摘要（跨所有週聚合）"""
+
+    backtest_id: int
+    start_week_id: str
+    end_week_id: str
+    config: WalkForwardConfig
+    total_weeks: int
+
+    # IC 摘要
+    mean_ic: float
+    icir: float
+    ic_positive_rate: float  # IC > 0 的比例 (%)
+
+    # 報酬摘要
+    annualized_return: float | None = None
+    annualized_excess: float | None = None
+    cumulative_return: float
+    market_return: float
+    excess_return: float
+    sharpe_ratio: float | None = None
+    max_drawdown: float | None = None
+    win_rate: float | None = None
+    total_trades: int | None = None
+
+    # 週級別資料（用於圖表）
+    weekly_points: list[WeeklySummaryPoint]
+
+    # 權益曲線
+    equity_curve: list[EquityCurvePoint]
+
+    created_at: str
+    completed_at: str | None = None

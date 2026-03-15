@@ -57,3 +57,25 @@ class TodayPredictionStatus(BaseModel):
     model_week: str | None
     is_fallback: bool
     message: str | None
+
+
+class PredictionHistoryItem(BaseModel):
+    """歷史預測摘要"""
+
+    trade_date: str
+    feature_date: str
+    model_name: str
+    model_week: str
+    is_fallback: bool
+    is_incremental: bool
+    incremental_days: int | None
+    signal_count: int
+    top_picks: list[PredictionSignal]
+    created_at: str | None
+
+
+class PredictionHistoryResponse(BaseModel):
+    """歷史預測列表"""
+
+    items: list[PredictionHistoryItem]
+    total: int

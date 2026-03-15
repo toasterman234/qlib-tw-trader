@@ -1,4 +1,0 @@
-[core]
-    remote = gdrive
-['remote "gdrive"']
-    url = G:/My Drive/qlib-tw-trader

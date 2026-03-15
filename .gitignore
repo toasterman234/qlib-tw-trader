@@ -72,3 +72,20 @@ credentials.json
 
 # Trained model files
 data/models/
+
+# DVC (data version control - personal cloud config)
+.dvc/
+.dvcignore
+data/*.dvc
+
+# Personal research & docs (kept locally, not in git)
+reports/
+docs/
+CLAUDE.md
+
+# Script outputs
+scripts/output/
+scripts/evaluate_crypto.py
+
+# Frontend build
+frontend/dist/

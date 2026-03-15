@@ -1,9 +1,14 @@
 """
 開盤前資料完整度檢查
-用法: python sandbox/check_previous_day.py [日期]
-範例: python sandbox/check_previous_day.py 2026-01-29
 
-若不指定日期，自動檢查前一個交易日
+檢查 TWSE/FinMind/yfinance 各資料源是否已更新到指定日期，
+用於確認每日交易前的資料完整度。
+
+用法: python scripts/check_previous_day.py [日期]
+範例: python scripts/check_previous_day.py 2026-01-29
+
+若不指定日期，自動檢查前一個交易日。
+退出碼：0 = 關鍵資料完整，1 = 資料不完整。
 """
 
 import asyncio

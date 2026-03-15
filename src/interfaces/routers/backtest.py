@@ -9,6 +9,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from src.interfaces.dependencies import get_db
+import statistics
+
 from src.interfaces.schemas.backtest import (
     AvailableWeeksResponse,
     EquityCurvePoint,
@@ -20,7 +22,9 @@ from src.interfaces.schemas.backtest import (
     WalkForwardResponse,
     WalkForwardReturnMetrics,
     WalkForwardRunResponse,
+    WalkForwardSummaryResponse,
     WeeklyDetail,
+    WeeklySummaryPoint,
     WeekStatus,
 )
 from src.services.job_manager import job_manager
@@ -91,6 +95,139 @@ async def list_walk_forward_backtests(
             for bt in backtests
         ],
         total=len(backtests),
+    )
+
+
+@router.get("/walk-forward/summary", response_model=WalkForwardSummaryResponse)
+async def get_walk_forward_summary(
+    backtest_id: int | None = Query(None, description="指定回測 ID，若無則取最新完成的"),
+    session: Session = Depends(get_db),
+):
+    """
+    取得 Walk-Forward 回測摘要
+
+    聚合 IC、報酬等指標，提供圖表所需的週級別資料。
+    """
+    from src.repositories.walk_forward import WalkForwardBacktestRepository
+
+    repo = WalkForwardBacktestRepository(session)
+
+    if backtest_id is not None:
+        bt = repo.get(backtest_id)
+        if not bt or bt.status != "completed":
+            raise HTTPException(status_code=404, detail="Completed backtest not found")
+    else:
+        bt = repo.get_latest_completed()
+        if not bt:
+            raise HTTPException(status_code=404, detail="No completed backtests found")
+
+    # 解析 weekly_details
+    weekly_details: list[dict] = []
+    if bt.weekly_details:
+        try:
+            weekly_details = json.loads(bt.weekly_details)
+        except json.JSONDecodeError:
+            pass
+
+    # 解析 result
+    result_data: dict = {}
+    if bt.result:
+        try:
+            result_data = json.loads(bt.result)
+        except json.JSONDecodeError:
+            pass
+
+    # 解析 equity_curve
+    equity_curve_raw: list[dict] = []
+    if bt.equity_curve:
+        try:
+            equity_curve_raw = json.loads(bt.equity_curve)
+        except json.JSONDecodeError:
+            pass
+
+    # 計算 IC 摘要
+    live_ics = [w["live_ic"] for w in weekly_details if w.get("live_ic") is not None]
+    mean_ic = statistics.mean(live_ics) if live_ics else 0.0
+    ic_std = statistics.stdev(live_ics) if len(live_ics) > 1 else 0.0
+    icir = mean_ic / ic_std if ic_std > 0 else 0.0
+    ic_positive_rate = (sum(1 for ic in live_ics if ic > 0) / len(live_ics) * 100) if live_ics else 0.0
+
+    # 從 result_data 取報酬指標
+    ret = result_data.get("return_metrics", {})
+    cumulative_return = ret.get("cumulative_return", 0.0)
+    market_return = ret.get("market_return", 0.0)
+    excess_return = ret.get("excess_return", 0.0)
+
+    # 估算年化報酬（假設每週一筆，一年約 52 週）
+    total_weeks = len(weekly_details)
+    annualized_return = None
+    annualized_excess = None
+    if total_weeks > 0:
+        weeks_per_year = 52
+        cum_factor = 1 + cumulative_return / 100
+        if cum_factor > 0:
+            annualized_return = (cum_factor ** (weeks_per_year / total_weeks) - 1) * 100
+        mkt_factor = 1 + market_return / 100
+        if cum_factor > 0 and mkt_factor > 0:
+            excess_factor = cum_factor / mkt_factor
+            annualized_excess = (excess_factor ** (weeks_per_year / total_weeks) - 1) * 100
+
+    # 建構 weekly_points（含累積報酬）
+    weekly_points = []
+    cum_ret = 0.0
+    cum_mkt = 0.0
+    for w in weekly_details:
+        wr = w.get("week_return") or 0.0
+        mr = w.get("market_return") or 0.0
+        cum_ret = (1 + cum_ret / 100) * (1 + wr / 100) * 100 - 100
+        cum_mkt = (1 + cum_mkt / 100) * (1 + mr / 100) * 100 - 100
+        weekly_points.append(WeeklySummaryPoint(
+            predict_week=w.get("predict_week", ""),
+            live_ic=w.get("live_ic"),
+            week_return=w.get("week_return"),
+            market_return=w.get("market_return"),
+            cumulative_return=round(cum_ret, 4),
+            cumulative_market=round(cum_mkt, 4),
+        ))
+
+    equity_curve = [
+        EquityCurvePoint(
+            date=p.get("date", ""),
+            equity=p.get("equity", 0),
+            benchmark=p.get("benchmark"),
+            drawdown=p.get("drawdown"),
+        )
+        for p in equity_curve_raw
+    ]
+
+    return WalkForwardSummaryResponse(
+        backtest_id=bt.id,
+        start_week_id=bt.start_week_id,
+        end_week_id=bt.end_week_id,
+        config=WalkForwardConfig(
+            initial_capital=float(bt.initial_capital),
+            max_positions=bt.max_positions,
+            trade_price=bt.trade_price,
+            enable_incremental=bt.enable_incremental,
+            strategy=bt.strategy,
+        ),
+        total_weeks=total_weeks,
+        mean_ic=round(mean_ic, 6),
+        icir=round(icir, 4),
+        ic_positive_rate=round(ic_positive_rate, 1),
+        annualized_return=round(annualized_return, 2) if annualized_return is not None else None,
+        annualized_excess=round(annualized_excess, 2) if annualized_excess is not None else None,
+        cumulative_return=cumulative_return,
+        market_return=market_return,
+        excess_return=excess_return,
+        sharpe_ratio=ret.get("sharpe_ratio"),
+        max_drawdown=ret.get("max_drawdown"),
+        win_rate=ret.get("win_rate"),
+        total_trades=ret.get("total_trades"),
+        weekly_points=weekly_points,
+        equity_curve=equity_curve,
+        created_at=bt.created_at.isoformat() if bt.created_at else "",
+        completed_at=bt.completed_at.isoformat() if bt.completed_at else None,
     )
 
 

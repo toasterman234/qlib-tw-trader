@@ -13,6 +13,8 @@ from sqlalchemy.orm import Session
 
 from src.interfaces.dependencies import get_db
 from src.interfaces.schemas.portfolio import (
+    PredictionHistoryItem,
+    PredictionHistoryResponse,
     PredictionRequest,
     PredictionSignal,
     PredictionsResponse,
@@ -276,6 +278,42 @@ async def generate_today_prediction(session: Session = Depends(get_db)):
     )
 
     return {"job_id": job_id, "status": "queued"}
+
+
+# ---------------------------------------------------------------------------
+# 歷史預測 API
+# ---------------------------------------------------------------------------
+
+
+@router.get("/predictions/history", response_model=PredictionHistoryResponse)
+async def list_prediction_history(
+    limit: int = 30,
+    session: Session = Depends(get_db),
+):
+    """取得歷史預測列表"""
+    repo = PredictionRepository(session)
+    predictions = repo.list_recent(limit)
+
+    items = []
+    for p in predictions:
+        signals = json.loads(p.signals)
+        top_picks = [PredictionSignal(**s) for s in signals[:10]]
+        items.append(
+            PredictionHistoryItem(
+                trade_date=p.trade_date.isoformat(),
+                feature_date=p.feature_date.isoformat(),
+                model_name=p.model_name,
+                model_week=p.model_week,
+                is_fallback=p.is_fallback,
+                is_incremental=p.is_incremental,
+                incremental_days=p.incremental_days,
+                signal_count=len(signals),
+                top_picks=top_picks,
+                created_at=p.created_at.isoformat() if p.created_at else None,
+            )
+        )
+
+    return PredictionHistoryResponse(items=items, total=len(items))
 
 
 # ---------------------------------------------------------------------------

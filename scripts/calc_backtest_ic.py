@@ -1,4 +1,11 @@
-"""計算回測期間的實際 IC"""
+"""
+計算回測期間的實際 IC（衰減分析）
+
+載入已完成的回測結果，逐日計算 Spearman IC，
+並與驗證期 IC 比較，分析模型泛化能力與 IC 衰減程度。
+
+用法: python scripts/calc_backtest_ic.py
+"""
 import json
 import pickle
 import sqlite3

@@ -1,6 +1,11 @@
 """
 回填單一股票多年歷史資料
-用法: python sandbox/backfill_stock.py 2330 2020-01-01 2026-01-28
+
+從各資料源（FinMind/TWSE/yfinance）下載指定股票的完整歷史資料，
+包含 OHLCV、還原股價、PER、三大法人、融資融券、外資持股等。
+
+用法: python scripts/backfill_stock.py <stock_id> <start_date> <end_date>
+範例: python scripts/backfill_stock.py 2330 2020-01-01 2026-01-28
 """
 
 import asyncio

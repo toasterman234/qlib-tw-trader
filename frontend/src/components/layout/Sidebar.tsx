@@ -9,6 +9,8 @@ import {
   Layers,
   Target,
   Activity,
+  Briefcase,
+  ClipboardCheck,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -25,12 +27,14 @@ const navigation: NavigationType[] = [
       { name: 'Training', href: '/models/training', icon: LineChart },
       { name: 'Quality', href: '/models/quality', icon: Activity },
       { name: 'Backtest', href: '/models/backtest', icon: BarChart3 },
+      { name: 'Evaluation', href: '/models/evaluation', icon: ClipboardCheck },
     ],
   },
   {
     name: 'Portfolio',
     items: [
       { name: 'Predictions', href: '/portfolio/predictions', icon: Target },
+      { name: 'Positions', href: '/portfolio/positions', icon: Briefcase },
     ],
   },
   {

@@ -21,6 +21,15 @@ class PredictionRepository:
         )
         return self._session.execute(stmt).scalar()
 
+    def list_recent(self, limit: int = 30) -> list[DailyPrediction]:
+        """取得最近的預測記錄（按日期降序）"""
+        stmt = (
+            select(DailyPrediction)
+            .order_by(DailyPrediction.trade_date.desc())
+            .limit(limit)
+        )
+        return list(self._session.execute(stmt).scalars().all())
+
     def create(self, prediction: DailyPrediction) -> DailyPrediction:
         """建立預測記錄"""
         self._session.add(prediction)
