@@ -278,7 +278,7 @@ export function Datasets() {
   const handleShareholdingRepair = async () => {
     await syncApi.calendar('2020-01-01')
     const result = await syncApi.shareholdingAll('2020-01-01')
-    checkSyncResponse(result, 'Shareholding data')
+    checkSyncResponse(result, 'Ownership data')
     await refreshSyncStatus()
   }
   const handleSecuritiesLendingRepair = async () => {
@@ -294,20 +294,12 @@ export function Datasets() {
   }
 
   const syncConfigByDataset: Record<string, SyncPanelConfig> = {
-    TaiwanStockPrice: { type: 'daily', title: 'Market Price Data', status: stockDailyStatus, syncAction: handleStockDailySync, repairAction: handleStockDailyRepair, syncLabel: 'Sync', repairLabel: 'Repair' },
     USEquityPrice: { type: 'daily', title: 'Market Price Data', status: stockDailyStatus, syncAction: handleStockDailySync, repairAction: handleStockDailyRepair, syncLabel: 'Sync', repairLabel: 'Repair' },
-    TaiwanStockPriceAdj: { type: 'daily', title: 'Adjusted Close Data', status: adjStatus, syncAction: handleAdjSync, repairAction: handleAdjRepair, syncLabel: 'Sync', repairLabel: 'Repair' },
     USEquityPriceAdj: { type: 'daily', title: 'Adjusted Close Data', status: adjStatus, syncAction: handleAdjSync, repairAction: handleAdjRepair, syncLabel: 'Sync', repairLabel: 'Repair' },
-    TaiwanStockPER: { type: 'daily', title: 'Valuation Data', status: perStatus, syncAction: handlePerSync, repairAction: handlePerRepair, syncLabel: 'Sync', repairLabel: 'Repair' },
     USEquityValuation: { type: 'daily', title: 'Valuation Data', status: perStatus, syncAction: handlePerSync, repairAction: handlePerRepair, syncLabel: 'Sync', repairLabel: 'Repair' },
-    TaiwanStockInstitutionalInvestorsBuySell: { type: 'daily', title: 'Institutional Flow', status: institutionalStatus, syncAction: handleInstitutionalSync, repairAction: handleInstitutionalRepair, syncLabel: 'Sync', repairLabel: 'Repair' },
     USInstitutionalFlow: { type: 'daily', title: 'Institutional Flow', status: institutionalStatus, syncAction: handleInstitutionalSync, repairAction: handleInstitutionalRepair, syncLabel: 'Sync', repairLabel: 'Repair' },
-    TaiwanStockMarginPurchaseShortSale: { type: 'daily', title: 'Margin / Short Data', status: marginStatus, syncAction: handleMarginSync, repairAction: handleMarginRepair, syncLabel: 'Sync', repairLabel: 'Repair' },
     USShortInterest: { type: 'daily', title: 'Margin / Short Data', status: marginStatus, syncAction: handleMarginSync, repairAction: handleMarginRepair, syncLabel: 'Sync', repairLabel: 'Repair' },
-    TaiwanStockShareholding: { type: 'daily', title: 'Shareholding Data', status: shareholdingStatus, syncAction: handleShareholdingSync, repairAction: handleShareholdingRepair, syncLabel: 'Sync', repairLabel: 'Repair' },
     USOwnership: { type: 'daily', title: 'Ownership Data', status: shareholdingStatus, syncAction: handleShareholdingSync, repairAction: handleShareholdingRepair, syncLabel: 'Sync', repairLabel: 'Repair' },
-    TaiwanStockSecuritiesLending: { type: 'daily', title: 'Securities Lending', status: securitiesLendingStatus, repairAction: handleSecuritiesLendingRepair, repairLabel: 'Repair' },
-    TaiwanStockMonthRevenue: { type: 'monthly', title: 'Revenue Data', status: monthlyRevenueStatus, repairAction: handleMonthlyRevenueRepair, repairLabel: 'Repair' },
     USRevenue: { type: 'monthly', title: 'Revenue Data', status: monthlyRevenueStatus, repairAction: handleMonthlyRevenueRepair, repairLabel: 'Repair' },
   }
 
@@ -331,7 +323,7 @@ export function Datasets() {
         <div>
           <h1 className="text-2xl font-bold">Datasets</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Inspect the current market data catalog, test adapters, and monitor sync coverage.
+            Inspect the current US market data catalog, test adapters, and monitor sync coverage.
           </p>
         </div>
         <div className="flex items-center gap-2">
