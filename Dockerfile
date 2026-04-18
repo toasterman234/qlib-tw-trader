@@ -22,7 +22,7 @@ COPY pyproject.toml .
 RUN mkdir -p data data/models data/qlib
 
 ENV PYTHONUNBUFFERED=1
-ENV TZ=Asia/Taipei
+ENV TZ=America/New_York
 
 EXPOSE 8000
 
