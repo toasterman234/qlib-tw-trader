@@ -1,12 +1,11 @@
-"""
-FastAPI 應用程式
-"""
+"""FastAPI application entrypoint."""
 
 import logging
 import time
 
 from dotenv import load_dotenv
-load_dotenv()  # 載入 .env 檔案
+
+load_dotenv()
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,8 +13,21 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 
 from src.interfaces.exceptions import register_exception_handlers
-from src.interfaces.routers import backtest, dashboard, datasets, factor, model, portfolio, qlib, sync, system, universe, websocket
+from src.interfaces.routers import (
+    backtest,
+    dashboard,
+    datasets,
+    factor,
+    model,
+    portfolio,
+    qlib,
+    sync,
+    system,
+    universe,
+    websocket,
+)
 from src.repositories.database import init_db
+from src.shared.market import get_market
 
 perf_logger = logging.getLogger("perf")
 
@@ -35,20 +47,20 @@ class TimingMiddleware(BaseHTTPMiddleware):
 
 
 def create_app() -> FastAPI:
-    """建立 FastAPI 應用程式"""
+    """Create the FastAPI application."""
+    market = get_market()
     app = FastAPI(
-        title="qlib-tw-trader API",
-        description="台灣股票交易與預測系統 API",
-        version="0.1.0",
+        title=market.app_title,
+        description=market.app_description,
+        version="0.2.0",
         docs_url="/docs",
         redoc_url="/redoc",
     )
 
-    # CORS 設定（允許前端存取）
     app.add_middleware(
         CORSMiddleware,
         allow_origins=[
-            "http://localhost:5173",  # Vite dev server
+            "http://localhost:5173",
             "http://localhost:3000",
         ],
         allow_credentials=True,
@@ -56,10 +68,8 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # 效能計時
     app.add_middleware(TimingMiddleware)
 
-    # 註冊路由
     app.include_router(sync.router, prefix="/api/v1/sync", tags=["sync"])
     app.include_router(universe.router, prefix="/api/v1/universe", tags=["universe"])
     app.include_router(datasets.router, prefix="/api/v1/datasets", tags=["datasets"])
@@ -72,10 +82,7 @@ def create_app() -> FastAPI:
     app.include_router(backtest.router, prefix="/api/v1/backtest", tags=["backtest"])
     app.include_router(qlib.router, prefix="/api/v1", tags=["qlib"])
 
-    # 註冊例外處理
     register_exception_handlers(app)
-
-    # 初始化資料庫
     init_db()
 
     return app
