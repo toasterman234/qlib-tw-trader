@@ -5,6 +5,7 @@ Model training service - DoubleEnsemble with robust factor selection.
 import hashlib
 import json
 import logging
+import os
 import pickle
 from dataclasses import dataclass
 from datetime import date, datetime
@@ -27,6 +28,8 @@ from src.shared.market import get_market
 
 MODELS_DIR = Path("data/models")
 TZ_RUNTIME = TZ_APP if isinstance(TZ_APP, ZoneInfo) else ZoneInfo(get_market().timezone)
+LGB_DEVICE = os.getenv("LGB_DEVICE", "cpu").strip().lower() or "cpu"
+LGB_USE_GPU_DP = LGB_DEVICE == "gpu"
 
 
 @dataclass
@@ -63,8 +66,8 @@ DEFAULT_LGB_PARAMS = {
     "verbosity": -1,
     "seed": 42,
     "feature_pre_filter": False,
-    "device": "gpu",
-    "gpu_use_dp": False,
+    "device": LGB_DEVICE,
+    "gpu_use_dp": LGB_USE_GPU_DP,
 }
 
 
@@ -217,8 +220,8 @@ class ModelTrainer:
                 "verbosity": -1,
                 "seed": 42,
                 "feature_pre_filter": False,
-                "device": "gpu",
-                "gpu_use_dp": False,
+                "device": LGB_DEVICE,
+                "gpu_use_dp": LGB_USE_GPU_DP,
                 "learning_rate": trial.suggest_float("learning_rate", 0.02, 0.2, log=True),
                 "num_leaves": trial.suggest_int("num_leaves", 16, 64),
                 "max_depth": trial.suggest_int("max_depth", 4, 8),
@@ -252,7 +255,7 @@ class ModelTrainer:
         study = optuna.create_study(direction="maximize")
         study.optimize(objective, n_trials=n_trials, timeout=timeout, show_progress_bar=False)
         best = study.best_params
-        return {"lgb_params": {"objective": "regression", "metric": "mse", "boosting_type": "gbdt", "verbosity": -1, "seed": 42, "feature_pre_filter": False, "device": "gpu", "gpu_use_dp": False, "bagging_freq": 5, **best}}
+        return {"lgb_params": {"objective": "regression", "metric": "mse", "boosting_type": "gbdt", "verbosity": -1, "seed": 42, "feature_pre_filter": False, "device": LGB_DEVICE, "gpu_use_dp": LGB_USE_GPU_DP, "bagging_freq": 5, **best}}
 
     def _train_model(self, X_train: pd.DataFrame, y_train: pd.Series, X_valid: pd.DataFrame, y_valid: pd.Series, params: dict | None = None) -> Any:
         from src.services.double_ensemble import DoubleEnsembleModel
@@ -390,6 +393,7 @@ class ModelTrainer:
                 "incremental_updated": incremented_model is not best_model,
                 "market": get_market().code,
                 "qlib_region": get_market().qlib_region,
+                "lgb_device": LGB_DEVICE,
             }
             if self._optimized_params:
                 config["hyperparameters"] = self._optimized_params
@@ -476,7 +480,7 @@ class ModelTrainer:
                 optimized_params = self._optimize_hyperparameters(X_train=X_train_clean, y_train=y_train_clean, X_valid=X_valid_clean, y_valid=y_valid_clean, n_trials=15, timeout=300, on_progress=optuna_progress)
                 self._optimized_params = optimized_params
                 lgb_best = optimized_params.get("lgb_params", {})
-                logger.info(f"Optuna found best LGB params: lr={lgb_best.get('learning_rate', 0):.4f}, leaves={lgb_best.get('num_leaves')}")
+                logger.info(f"Optuna found best LGB params: lr={lgb_best.get('learning_rate', 0):.4f}, leaves={lgb_best.get('num_leaves')}, device={lgb_best.get('device', LGB_DEVICE)}")
                 if on_progress:
                     on_progress(94.0, f"Optuna done: lr={lgb_best.get('learning_rate', 0):.4f}, leaves={lgb_best.get('num_leaves')}")
             try:
