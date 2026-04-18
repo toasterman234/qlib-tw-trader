@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 import yfinance as yf
 
@@ -82,6 +82,13 @@ class MonthlyStatusResponse(BaseModel):
     stocks: list[MonthlyStatusItem]
 
 
+class MonthlyStockResponse(BaseModel):
+    stock_id: str
+    fetched: int
+    inserted: int
+    missing_months: list[str]
+
+
 def _to_decimal(value) -> Decimal | None:
     if value is None:
         return None
@@ -93,6 +100,10 @@ def _to_decimal(value) -> Decimal | None:
 
 def _get_universe(session: Session):
     return session.execute(select(StockUniverse).order_by(StockUniverse.rank)).scalars().all()
+
+
+def _placeholder_error(name: str) -> str:
+    return f"{name} sync is not implemented for US mode yet."
 
 
 async def _sync_calendar_impl(start_date: date, end_date: date, session: Session):
@@ -374,3 +385,135 @@ async def sync_adj_all(start_date: date = Query(default=date(2020, 1, 1)), end_d
         except Exception as e:
             errors.append({"stock_id": stock.stock_id, "error": str(e)})
     return SyncAllResponse(stocks=len(universe), total_inserted=total_inserted, errors=errors)
+
+
+@router.get("/per/status", response_model=DataStatusResponse)
+async def get_per_status(start_date: date = Query(default=date(2020, 1, 1)), end_date: date = Query(default=None), session: Session = Depends(get_db)):
+    if end_date is None:
+        end_date = date.today()
+    result = _empty_daily_status(session, start_date, end_date)
+    return DataStatusResponse(trading_days=result["trading_days"], start_date=result["start_date"], end_date=result["end_date"], stocks=[DataStatusItem(**s) for s in result["stocks"]])
+
+
+@router.post("/per/bulk", response_model=SyncBulkResponse)
+async def sync_per_bulk(target_date: date = Query(default=None), session: Session = Depends(get_db)):
+    d = target_date or date.today()
+    return SyncBulkResponse(date=d.isoformat(), total=0, inserted=0, error=_placeholder_error("PER/PBR/dividend yield"))
+
+
+@router.post("/per/stock/{stock_id}", response_model=SyncStockResponse)
+async def sync_per_stock(stock_id: str, session: Session = Depends(get_db)):
+    return SyncStockResponse(stock_id=stock_id, fetched=0, inserted=0, missing_dates=[])
+
+
+@router.post("/per/all", response_model=SyncAllResponse)
+async def sync_per_all(session: Session = Depends(get_db)):
+    return SyncAllResponse(stocks=len(_get_universe(session)), total_inserted=0, errors=[{"stock_id": "*", "error": _placeholder_error("PER/PBR/dividend yield") }])
+
+
+@router.get("/institutional/status", response_model=DataStatusResponse)
+async def get_institutional_status(start_date: date = Query(default=date(2020, 1, 1)), end_date: date = Query(default=None), session: Session = Depends(get_db)):
+    if end_date is None:
+        end_date = date.today()
+    result = _empty_daily_status(session, start_date, end_date)
+    return DataStatusResponse(trading_days=result["trading_days"], start_date=result["start_date"], end_date=result["end_date"], stocks=[DataStatusItem(**s) for s in result["stocks"]])
+
+
+@router.post("/institutional/bulk", response_model=SyncBulkResponse)
+async def sync_institutional_bulk(target_date: date = Query(default=None), session: Session = Depends(get_db)):
+    d = target_date or date.today()
+    return SyncBulkResponse(date=d.isoformat(), total=0, inserted=0, error=_placeholder_error("Institutional flow"))
+
+
+@router.post("/institutional/stock/{stock_id}", response_model=SyncStockResponse)
+async def sync_institutional_stock(stock_id: str, session: Session = Depends(get_db)):
+    return SyncStockResponse(stock_id=stock_id, fetched=0, inserted=0, missing_dates=[])
+
+
+@router.post("/institutional/all", response_model=SyncAllResponse)
+async def sync_institutional_all(session: Session = Depends(get_db)):
+    return SyncAllResponse(stocks=len(_get_universe(session)), total_inserted=0, errors=[{"stock_id": "*", "error": _placeholder_error("Institutional flow") }])
+
+
+@router.get("/margin/status", response_model=DataStatusResponse)
+async def get_margin_status(start_date: date = Query(default=date(2020, 1, 1)), end_date: date = Query(default=None), session: Session = Depends(get_db)):
+    if end_date is None:
+        end_date = date.today()
+    result = _empty_daily_status(session, start_date, end_date)
+    return DataStatusResponse(trading_days=result["trading_days"], start_date=result["start_date"], end_date=result["end_date"], stocks=[DataStatusItem(**s) for s in result["stocks"]])
+
+
+@router.post("/margin/bulk", response_model=SyncBulkResponse)
+async def sync_margin_bulk(target_date: date = Query(default=None), session: Session = Depends(get_db)):
+    d = target_date or date.today()
+    return SyncBulkResponse(date=d.isoformat(), total=0, inserted=0, error=_placeholder_error("Margin / short interest"))
+
+
+@router.post("/margin/stock/{stock_id}", response_model=SyncStockResponse)
+async def sync_margin_stock(stock_id: str, session: Session = Depends(get_db)):
+    return SyncStockResponse(stock_id=stock_id, fetched=0, inserted=0, missing_dates=[])
+
+
+@router.post("/margin/all", response_model=SyncAllResponse)
+async def sync_margin_all(session: Session = Depends(get_db)):
+    return SyncAllResponse(stocks=len(_get_universe(session)), total_inserted=0, errors=[{"stock_id": "*", "error": _placeholder_error("Margin / short interest") }])
+
+
+@router.get("/shareholding/status", response_model=DataStatusResponse)
+async def get_shareholding_status(start_date: date = Query(default=date(2020, 1, 1)), end_date: date = Query(default=None), session: Session = Depends(get_db)):
+    if end_date is None:
+        end_date = date.today()
+    result = _empty_daily_status(session, start_date, end_date)
+    return DataStatusResponse(trading_days=result["trading_days"], start_date=result["start_date"], end_date=result["end_date"], stocks=[DataStatusItem(**s) for s in result["stocks"]])
+
+
+@router.post("/shareholding/bulk", response_model=SyncBulkResponse)
+async def sync_shareholding_bulk(target_date: date = Query(default=None), session: Session = Depends(get_db)):
+    d = target_date or date.today()
+    return SyncBulkResponse(date=d.isoformat(), total=0, inserted=0, error=_placeholder_error("Shareholding") )
+
+
+@router.post("/shareholding/stock/{stock_id}", response_model=SyncStockResponse)
+async def sync_shareholding_stock(stock_id: str, session: Session = Depends(get_db)):
+    return SyncStockResponse(stock_id=stock_id, fetched=0, inserted=0, missing_dates=[])
+
+
+@router.post("/shareholding/all", response_model=SyncAllResponse)
+async def sync_shareholding_all(session: Session = Depends(get_db)):
+    return SyncAllResponse(stocks=len(_get_universe(session)), total_inserted=0, errors=[{"stock_id": "*", "error": _placeholder_error("Shareholding") }])
+
+
+@router.get("/securities-lending/status", response_model=DataStatusResponse)
+async def get_securities_lending_status(start_date: date = Query(default=date(2020, 1, 1)), end_date: date = Query(default=None), session: Session = Depends(get_db)):
+    if end_date is None:
+        end_date = date.today()
+    result = _empty_daily_status(session, start_date, end_date)
+    return DataStatusResponse(trading_days=result["trading_days"], start_date=result["start_date"], end_date=result["end_date"], stocks=[DataStatusItem(**s) for s in result["stocks"]])
+
+
+@router.post("/securities-lending/stock/{stock_id}", response_model=SyncStockResponse)
+async def sync_securities_lending_stock(stock_id: str, session: Session = Depends(get_db)):
+    return SyncStockResponse(stock_id=stock_id, fetched=0, inserted=0, missing_dates=[])
+
+
+@router.post("/securities-lending/all", response_model=SyncAllResponse)
+async def sync_securities_lending_all(session: Session = Depends(get_db)):
+    return SyncAllResponse(stocks=len(_get_universe(session)), total_inserted=0, errors=[{"stock_id": "*", "error": _placeholder_error("Securities lending") }])
+
+
+@router.get("/monthly-revenue/status", response_model=MonthlyStatusResponse)
+async def get_monthly_revenue_status(start_year: int = Query(default=2020), end_year: int = Query(default=None), session: Session = Depends(get_db)):
+    if end_year is None:
+        end_year = date.today().year
+    result = _empty_monthly_status(session, start_year, end_year)
+    return MonthlyStatusResponse(expected_months=result["expected_months"], start_year=result["start_year"], end_year=result["end_year"], stocks=[MonthlyStatusItem(**s) for s in result["stocks"]])
+
+
+@router.post("/monthly-revenue/stock/{stock_id}", response_model=MonthlyStockResponse)
+async def sync_monthly_revenue_stock(stock_id: str, session: Session = Depends(get_db)):
+    return MonthlyStockResponse(stock_id=stock_id, fetched=0, inserted=0, missing_months=[])
+
+
+@router.post("/monthly-revenue/all", response_model=SyncAllResponse)
+async def sync_monthly_revenue_all(session: Session = Depends(get_db)):
+    return SyncAllResponse(stocks=len(_get_universe(session)), total_inserted=0, errors=[{"stock_id": "*", "error": _placeholder_error("Monthly revenue") }])
