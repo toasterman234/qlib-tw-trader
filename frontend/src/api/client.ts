@@ -1,4 +1,5 @@
-const API_BASE = '/api/v1'
+const RAW_API_URL = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '')
+const API_BASE = `${RAW_API_URL ?? ''}/api/v1`
 
 async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE}${endpoint}`, {
@@ -10,7 +11,6 @@ async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({}))
-    // FastAPI 使用 detail，其他可能用 error.message
     const message = error.detail || error.error?.message || error.message || `HTTP ${response.status}`
     throw new Error(message)
   }
@@ -39,7 +39,6 @@ export const api = {
     fetch(`${API_BASE}${endpoint}`, { method: 'DELETE' }),
 }
 
-// Types
 export interface DatasetStatus {
   name: string
   earliest_date: string | null
@@ -85,7 +84,6 @@ export interface SyncResponse {
   synced_at: string
 }
 
-// Factor Types
 export interface Factor {
   id: string
   name: string
@@ -129,7 +127,6 @@ export interface FactorUpdate {
   formula?: string
 }
 
-// API functions
 export const systemApi = {
   health: () => api.get<HealthResponse>('/system/health'),
   dataStatus: () => api.get<DataStatusResponse>('/system/data-status'),
@@ -189,7 +186,6 @@ export const factorApi = {
   },
 }
 
-// Model Types
 export interface Period {
   start: string
   end: string
@@ -243,7 +239,6 @@ export interface ModelSummary {
   selection_method: string | null
 }
 
-// 向後兼容
 export type ModelHistoryItem = ModelSummary
 
 export interface ModelHistoryResponse {
@@ -252,14 +247,13 @@ export interface ModelHistoryResponse {
 }
 
 export interface TrainRequest {
-  week_id: string  // "2026W05"
+  week_id: string
 }
 
 export interface TrainBatchRequest {
-  year: string  // "2025"
+  year: string
 }
 
-// Week Types
 export interface WeekModel {
   id: string
   name: string
@@ -301,7 +295,6 @@ export interface DeleteResponse {
   id: string
 }
 
-// Quality Types
 export interface QualityMetricsItem {
   training_run_id: number
   week_id: string | null
@@ -329,25 +322,19 @@ export const modelApi = {
   get: (id: string) => api.get<Model>(`/models/${id}`),
   delete: (id: string) => api.delete(`/models/${id}`).then(res => res.json() as Promise<DeleteResponse>),
   deleteAll: () => api.delete('/models/all').then(res => res.json() as Promise<{ deleted_count: number }>),
-
-  // 週訓練
   weeks: () => api.get<WeeksResponse>('/models/weeks'),
   train: (data: TrainRequest) => api.post<TrainResponse>('/models/train', data),
   trainBatch: (data: TrainBatchRequest) => api.post<TrainResponse>('/models/train-batch', data),
-
   history: (limit?: number) => {
     const query = limit ? `?limit=${limit}` : ''
     return api.get<ModelHistoryResponse>(`/models/history${query}`)
   },
-
-  // 品質監控
   quality: (limit?: number) => {
     const query = limit ? `?limit=${limit}` : ''
     return api.get<QualityResponse>(`/models/quality${query}`)
   },
 }
 
-// Portfolio Types
 export interface PredictionRequest {
   model_id: number
   top_k: number
@@ -411,19 +398,15 @@ export interface PredictionHistoryResponse {
 }
 
 export const portfolioApi = {
-  generatePredictions: (data: PredictionRequest) =>
-    api.post<PredictionsResponse>('/predictions/generate', data),
-  todayStatus: () =>
-    api.get<TodayPredictionStatus>('/predictions/today'),
-  generateToday: () =>
-    api.post<{ job_id: string; status: string }>('/predictions/today/generate', {}),
+  generatePredictions: (data: PredictionRequest) => api.post<PredictionsResponse>('/predictions/generate', data),
+  todayStatus: () => api.get<TodayPredictionStatus>('/predictions/today'),
+  generateToday: () => api.post<{ job_id: string; status: string }>('/predictions/today/generate', {}),
   history: (limit?: number) => {
     const query = limit ? `?limit=${limit}` : ''
     return api.get<PredictionHistoryResponse>(`/predictions/history${query}`)
   },
 }
 
-// Dashboard Types
 export interface DashboardSummary {
   factors: {
     total: number
@@ -461,7 +444,6 @@ export const dashboardApi = {
   summary: () => api.get<DashboardSummary>('/dashboard/summary'),
 }
 
-// Job Types
 export interface JobItem {
   id: string
   job_type: string
@@ -490,7 +472,6 @@ export const jobApi = {
   cancel: (jobId: string) => api.delete(`/jobs/${jobId}`).then(res => res.json() as Promise<{ status: string; id: string }>),
 }
 
-// Dataset Types
 export interface DatasetInfo {
   name: string
   display_name: string
@@ -521,7 +502,6 @@ export interface CategoryInfo {
   available: number
 }
 
-// Universe Types
 export interface StockInfo {
   stock_id: string
   name: string
@@ -569,7 +549,6 @@ export const datasetsApi = {
   categories: () => api.get<{ categories: CategoryInfo[] }>('/datasets/categories'),
 }
 
-// Sync Types
 export interface SyncStatusItem {
   stock_id: string
   name: string
@@ -616,7 +595,6 @@ export interface SyncAllResponse {
   errors: { stock_id: string; error: string }[]
 }
 
-// 月營收專用
 export interface MonthlyStatusItem {
   stock_id: string
   name: string
@@ -689,7 +667,6 @@ export const syncApi = {
     const query = params.toString() ? `?${params.toString()}` : ''
     return api.post<SyncAllResponse>(`/sync/all${query}`, {})
   },
-  // PER/PBR/殖利率
   perStatus: (startDate?: string, endDate?: string) => {
     const params = new URLSearchParams()
     if (startDate) params.set('start_date', startDate)
@@ -717,7 +694,6 @@ export const syncApi = {
     const query = params.toString() ? `?${params.toString()}` : ''
     return api.post<SyncAllResponse>(`/sync/per/all${query}`, {})
   },
-  // 三大法人
   institutionalStatus: (startDate?: string, endDate?: string) => {
     const params = new URLSearchParams()
     if (startDate) params.set('start_date', startDate)
@@ -745,7 +721,6 @@ export const syncApi = {
     const query = params.toString() ? `?${params.toString()}` : ''
     return api.post<SyncAllResponse>(`/sync/institutional/all${query}`, {})
   },
-  // 融資融券
   marginStatus: (startDate?: string, endDate?: string) => {
     const params = new URLSearchParams()
     if (startDate) params.set('start_date', startDate)
@@ -773,7 +748,6 @@ export const syncApi = {
     const query = params.toString() ? `?${params.toString()}` : ''
     return api.post<SyncAllResponse>(`/sync/margin/all${query}`, {})
   },
-  // 還原股價 (yfinance)
   adjStatus: (startDate?: string, endDate?: string) => {
     const params = new URLSearchParams()
     if (startDate) params.set('start_date', startDate)
@@ -801,7 +775,6 @@ export const syncApi = {
     const query = params.toString() ? `?${params.toString()}` : ''
     return api.post<SyncAllResponse>(`/sync/adj/all${query}`, {})
   },
-  // 外資持股
   shareholdingStatus: (startDate?: string, endDate?: string) => {
     const params = new URLSearchParams()
     if (startDate) params.set('start_date', startDate)
@@ -829,7 +802,6 @@ export const syncApi = {
     const query = params.toString() ? `?${params.toString()}` : ''
     return api.post<SyncAllResponse>(`/sync/shareholding/all${query}`, {})
   },
-  // 借券明細
   securitiesLendingStatus: (startDate?: string, endDate?: string) => {
     const params = new URLSearchParams()
     if (startDate) params.set('start_date', startDate)
@@ -851,7 +823,6 @@ export const syncApi = {
     const query = params.toString() ? `?${params.toString()}` : ''
     return api.post<SyncAllResponse>(`/sync/securities-lending/all${query}`, {})
   },
-  // 月營收
   monthlyRevenueStatus: (startYear?: number, endYear?: number) => {
     const params = new URLSearchParams()
     if (startYear) params.set('start_year', String(startYear))
@@ -874,10 +845,6 @@ export const syncApi = {
     return api.post<SyncAllResponse>(`/sync/monthly-revenue/all${query}`, {})
   },
 }
-
-// =============================================================================
-// Walk-Forward Backtest Types
-// =============================================================================
 
 export interface EquityCurvePoint {
   date: string
