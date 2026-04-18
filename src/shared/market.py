@@ -19,20 +19,6 @@ class MarketConfig:
     supports_tw_only_datasets: bool
 
 
-TW_MARKET = MarketConfig(
-    code="tw",
-    display_name="Taiwan",
-    app_title="QLib Trader API",
-    app_description="Taiwan equity research, prediction, and backtesting API",
-    timezone=os.getenv("APP_TIMEZONE", "Asia/Taipei"),
-    qlib_region="cn",
-    calendar_symbol="0050.TW",
-    yf_suffix=".TW",
-    universe_name="tw100",
-    universe_description="Top 100 Taiwan equities by market cap (ex ETF / KY)",
-    supports_tw_only_datasets=True,
-)
-
 US_MARKET = MarketConfig(
     code="us",
     display_name="United States",
@@ -49,13 +35,12 @@ US_MARKET = MarketConfig(
 
 
 def get_market() -> MarketConfig:
-    code = os.getenv("APP_MARKET", "tw").strip().lower()
-    return US_MARKET if code == "us" else TW_MARKET
+    return US_MARKET
 
 
 def market_is_us() -> bool:
-    return get_market().code == "us"
+    return True
 
 
 def market_is_tw() -> bool:
-    return get_market().code == "tw"
+    return False
