@@ -21,14 +21,13 @@ from src.interfaces.routers import (
     model,
     portfolio,
     qlib,
-    sync,
     sync_us,
     system,
     universe,
     websocket,
 )
 from src.repositories.database import init_db
-from src.shared.market import get_market, market_is_us
+from src.shared.market import get_market
 
 perf_logger = logging.getLogger("perf")
 
@@ -53,7 +52,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title=market.app_title,
         description=market.app_description,
-        version="0.3.0",
+        version="1.0.0-us",
         docs_url="/docs",
         redoc_url="/redoc",
     )
@@ -71,9 +70,7 @@ def create_app() -> FastAPI:
 
     app.add_middleware(TimingMiddleware)
 
-    active_sync_router = sync_us.router if market_is_us() else sync.router
-
-    app.include_router(active_sync_router, prefix="/api/v1/sync", tags=["sync"])
+    app.include_router(sync_us.router, prefix="/api/v1/sync", tags=["sync"])
     app.include_router(universe.router, prefix="/api/v1/universe", tags=["universe"])
     app.include_router(datasets.router, prefix="/api/v1/datasets", tags=["datasets"])
     app.include_router(system.router, prefix="/api/v1/system", tags=["system"])
