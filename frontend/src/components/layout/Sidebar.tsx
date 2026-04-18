@@ -48,20 +48,18 @@ const navigation: NavigationType[] = [
 export function Sidebar() {
   return (
     <div className="sidebar flex w-60 flex-col">
-      {/* Header */}
       <div className="px-4 py-5 border-b border-border">
         <div className="flex items-center gap-3">
           <div className="icon-box icon-box-blue">
             <Zap className="h-4 w-4" />
           </div>
           <div>
-            <h1 className="text-sm font-semibold">QLIB-TW</h1>
-            <p className="text-[10px] text-muted-foreground">Trader</p>
+            <h1 className="text-sm font-semibold">QLib Trader</h1>
+            <p className="text-[10px] text-muted-foreground">Research Workspace</p>
           </div>
         </div>
       </div>
 
-      {/* Navigation */}
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
         {navigation.map((item) => {
           if ('href' in item) {
@@ -80,7 +78,6 @@ export function Sidebar() {
         })}
       </nav>
 
-      {/* Footer */}
       <div className="p-3 border-t border-border">
         <NavLink
           to="/settings"
